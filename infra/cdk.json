@@ -1,7 +1,7 @@
 {
   "app": "npx tsx bin/app.ts",
   "context": {
-    "githubRepo": "YOUR_GITHUB_USERNAME/oshiloot",
+    "githubRepo": "Runus01/oshiloot",
     "createGithubOidcProvider": true,
     "imageTag": "latest"
   }
