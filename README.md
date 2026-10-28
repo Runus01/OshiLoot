@@ -1,6 +1,6 @@
 # OshiLoot
 
-[![ci](https://github.com/YOUR_GITHUB_USERNAME/oshiloot/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/oshiloot/actions/workflows/ci.yml)
+[![ci](https://github.com/Runus01/oshiloot/actions/workflows/ci.yml/badge.svg)](https://github.com/Runus01/oshiloot/actions/workflows/ci.yml)
 
 Find official and second-hand merch for the anime on your MyAnimeList, ordered by the
 scores you gave them.
