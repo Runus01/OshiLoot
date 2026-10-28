@@ -5,7 +5,13 @@ import type {
   ListEntry,
   ListStatus,
   MerchResponse,
+  MyLists,
+  SignInStatus,
 } from "./types";
+
+// Full-page navigations, not fetches: the backend redirects to MyAnimeList and back.
+export const SIGN_IN_URL = "/api/anime/auth/login";
+export const SIGN_OUT_URL = "/api/anime/auth/logout";
 
 export class ApiError extends Error {
   constructor(
@@ -37,12 +43,27 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+let myListsInFlight: Promise<MyLists> | null = null;
+
 export const api = {
   userList: (username: string, status: ListStatus, signal?: AbortSignal) =>
     getJson<ListEntry[]>(
       `/api/anime/users/${encodeURIComponent(username)}/list?status=${status}`,
       signal,
     ),
+
+  signInStatus: () => getJson<SignInStatus>("/api/anime/auth/me"),
+
+  // Uses the HttpOnly sign-in cookie, which the browser sends automatically (same origin).
+  myLists: () => {
+    // Share one request between overlapping callers (React StrictMode runs effects twice in
+    // development). MAL revokes a refresh token once used, so two parallel refreshes would
+    // sign the user out.
+    myListsInFlight ??= getJson<MyLists>("/api/anime/me/lists").finally(() => {
+      myListsInFlight = null;
+    });
+    return myListsInFlight;
+  },
 
   search: (query: string, signal?: AbortSignal) =>
     getJson<Anime[]>(`/api/anime/search?q=${encodeURIComponent(query)}`, signal),

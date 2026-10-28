@@ -31,7 +31,7 @@ def get_service(
 Service = Annotated[AnimeService, Depends(get_service)]
 
 
-def _upstream_error(exc: AnimeSourceError) -> HTTPException:
+def upstream_error(exc: AnimeSourceError) -> HTTPException:
     if isinstance(exc, UserNotFound):
         return HTTPException(
             404,
@@ -54,7 +54,7 @@ async def user_list(
     try:
         return await service.user_list(username, status)
     except AnimeSourceError as exc:
-        raise _upstream_error(exc) from exc
+        raise upstream_error(exc) from exc
 
 
 @router.get("/search", response_model=list[Anime])
@@ -64,7 +64,7 @@ async def search(
     try:
         return await service.search(q)
     except AnimeSourceError as exc:
-        raise _upstream_error(exc) from exc
+        raise upstream_error(exc) from exc
 
 
 @router.get("/{anime_id}", response_model=Anime)
@@ -72,7 +72,7 @@ async def details(anime_id: Annotated[int, Path(gt=0)], service: Service) -> Ani
     try:
         anime = await service.get(anime_id)
     except AnimeSourceError as exc:
-        raise _upstream_error(exc) from exc
+        raise upstream_error(exc) from exc
     if anime is None:
         raise HTTPException(404, "No anime with that ID.")
     return anime

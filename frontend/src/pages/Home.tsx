@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { api, ApiError } from "../api";
+import { useSearchParams } from "react-router";
+import { api, ApiError, SIGN_IN_URL, SIGN_OUT_URL } from "../api";
 import { Cover } from "../components/Cover";
 import { groupByScore } from "../lib/scores";
-import { cachedList, cacheList, saveUsername, savedUsername } from "../lib/storage";
-import type { Anime, ListEntry, ListStatus } from "../types";
+import { cachedList, cacheList, forgetLists, saveUsername, savedUsername } from "../lib/storage";
+import type { Anime, ListEntry, ListStatus, SignInStatus } from "../types";
 
 type Lists = Record<ListStatus, ListEntry[]>;
 
@@ -12,7 +13,20 @@ const TABS: { status: ListStatus; label: string }[] = [
   { status: "watching", label: "Watching" },
 ];
 
+// Set by the backend when MyAnimeList sends the user back (/?signin=...).
+const SIGN_IN_NOTICES: Record<string, string> = {
+  cancelled: "Sign-in cancelled. You can still load a public list by username.",
+  failed: "Signing in with MyAnimeList didn't work. Try again, or load a public list by username.",
+  out: "Signed out of MyAnimeList.",
+};
+
+// Signed-in lists are cached under a key no MAL username can have ("@" isn't allowed).
+const myCacheKey = (username: string) => `@me-${username}`;
+
 export function Home() {
+  const [params, setParams] = useSearchParams();
+  const [account, setAccount] = useState<SignInStatus | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [username, setUsername] = useState(savedUsername() ?? "");
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [lists, setLists] = useState<Lists | null>(null);
@@ -20,82 +34,167 @@ export function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadList = async (name: string) => {
-    const cleaned = name.trim();
-    if (!cleaned) return;
+  const load = async (cacheKey: string, label: string, fetchLists: () => Promise<Lists>) => {
     setError(null);
     const cached = {
-      completed: cachedList<ListEntry[]>(cleaned, "completed"),
-      watching: cachedList<ListEntry[]>(cleaned, "watching"),
+      completed: cachedList<ListEntry[]>(cacheKey, "completed"),
+      watching: cachedList<ListEntry[]>(cacheKey, "watching"),
     };
     if (cached.completed && cached.watching) {
       setLists(cached as Lists);
-      setLoadedFor(cleaned);
+      setLoadedFor(label);
       return;
     }
     setLoading(true);
     try {
-      const [completed, watching] = await Promise.all([
-        api.userList(cleaned, "completed"),
-        api.userList(cleaned, "watching"),
-      ]);
-      cacheList(cleaned, "completed", completed);
-      cacheList(cleaned, "watching", watching);
-      saveUsername(cleaned);
-      setLists({ completed, watching });
-      setLoadedFor(cleaned);
+      const fresh = await fetchLists();
+      cacheList(cacheKey, "completed", fresh.completed);
+      cacheList(cacheKey, "watching", fresh.watching);
+      setLists(fresh);
+      setLoadedFor(label);
     } catch (err) {
       setLists(null);
       setError(err instanceof ApiError ? err.message : "Something went wrong loading your list.");
+      if (err instanceof ApiError && err.status === 401) {
+        setAccount((current) => current && { ...current, signed_in: false, username: null });
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Returning visitors see their list straight away (from this tab's session cache).
+  const loadPublicList = (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) return;
+    void load(cleaned, cleaned, async () => {
+      const [completed, watching] = await Promise.all([
+        api.userList(cleaned, "completed"),
+        api.userList(cleaned, "watching"),
+      ]);
+      saveUsername(cleaned);
+      return { completed, watching };
+    });
+  };
+
+  const loadMyList = (status: SignInStatus) => {
+    if (!status.username) return;
+    void load(myCacheKey(status.username), status.username, async () => {
+      // One request for both lists, so an expired token is refreshed only once.
+      const mine = await api.myLists();
+      return { completed: mine.completed, watching: mine.watching };
+    });
+  };
+
   useEffect(() => {
-    const name = savedUsername();
-    if (name && cachedList(name, "completed") && cachedList(name, "watching")) void loadList(name);
+    const result = params.get("signin");
+    if (result) {
+      setNotice(SIGN_IN_NOTICES[result] ?? null);
+      setParams({}, { replace: true });
+    }
+    api
+      .signInStatus()
+      .then((status) => {
+        setAccount(status);
+        if (status.signed_in && status.username) {
+          loadMyList(status); // from this tab's cache when it has one, otherwise from MAL
+          return;
+        }
+        // Returning visitors see their public list straight away (this tab's session cache).
+        const name = savedUsername();
+        if (name && cachedList(name, "completed") && cachedList(name, "watching")) {
+          loadPublicList(name);
+        }
+      })
+      .catch(() => setAccount({ available: false, signed_in: false, username: null }));
   }, []);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    void loadList(username);
+    loadPublicList(username);
   };
+
+  const errorMessage = error && (
+    <p className="error" role="alert">
+      {error}
+    </p>
+  );
 
   return (
     <>
       <section className="intro">
         <h1 className="headline">Merch for the anime you rated highest.</h1>
         <p className="lede">
-          Enter your MyAnimeList username to line up your list by your own scores. Open any
-          anime to see official and second-hand merch that ships to you.
+          Enter your MyAnimeList username, or sign in if your list is private, to line up your
+          anime by your own scores. Open any of them to see official and second-hand merch that
+          ships to you.
         </p>
-        <form className="username-form" onSubmit={submit}>
-          <label htmlFor="username">MyAnimeList username</label>
-          <div className="field-row">
-            <input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              spellCheck={false}
-              placeholder="your_username"
-              pattern="[A-Za-z0-9_\-]{2,16}"
-              title="2–16 letters, numbers, underscores or hyphens"
-              required
-            />
-            <button className="button" type="submit" disabled={loading}>
-              {loading ? "Loading list…" : "Load my list"}
-            </button>
-          </div>
-          <p className="hint">Your list must be public. Nothing is saved on our server.</p>
-          {error && (
-            <p className="error" role="alert">
-              {error}
+        {notice && (
+          <p className="hint" role="status">
+            {notice}
+          </p>
+        )}
+
+        {account?.signed_in && account.username ? (
+          <div className="username-form">
+            <p>
+              Signed in to MyAnimeList as <strong>{account.username}</strong>.{" "}
+              {/* A normal navigation: the backend clears the cookie and redirects home. */}
+              <a href={SIGN_OUT_URL} onClick={() => forgetLists(myCacheKey(account.username!))}>
+                Sign{"\u00a0"}out
+              </a>
             </p>
-          )}
-        </form>
+            {!lists && (
+              <div className="field-row">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => loadMyList(account)}
+                  disabled={loading}
+                >
+                  {loading ? "Loading list…" : "Load my list"}
+                </button>
+              </div>
+            )}
+            <p className="hint">
+              Private lists work too. Your sign-in stays in this browser, not on our server.
+            </p>
+            {errorMessage}
+          </div>
+        ) : (
+          <>
+            <form className="username-form" onSubmit={submit}>
+              <label htmlFor="username">MyAnimeList username</label>
+              <div className="field-row">
+                <input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  spellCheck={false}
+                  placeholder="your_username"
+                  pattern="[A-Za-z0-9_\-]{2,16}"
+                  title="2–16 letters, numbers, underscores or hyphens"
+                  required
+                />
+                <button className="button" type="submit" disabled={loading}>
+                  {loading ? "Loading list…" : "Load my list"}
+                </button>
+              </div>
+              <p className="hint">This needs a public list. Nothing is saved on our server.</p>
+              {errorMessage}
+            </form>
+            {account?.available && (
+              <form className="username-form" action={SIGN_IN_URL} method="get">
+                <p className="hint">List set to private?</p>
+                <div>
+                  <button className="button-quiet" type="submit">
+                    Sign in with MyAnimeList
+                  </button>
+                </div>
+              </form>
+            )}
+          </>
+        )}
       </section>
 
       {lists && loadedFor && (

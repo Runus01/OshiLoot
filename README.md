@@ -7,8 +7,8 @@ scores you gave them.
 
 **Live:** _add your CloudFront or custom-domain URL here after the first deploy_
 
-- Enter a MyAnimeList username (public lists, no login) and see Completed and Watching
-  anime grouped by your score, 10 first.
+- Enter a MyAnimeList username, or sign in with MyAnimeList if your list is private, and
+  see Completed and Watching anime grouped by your score, 10 first.
 - Open an anime to see live eBay listings plus search links for CDJapan, AmiAmi,
   HobbyLink Japan, Mercari (via Buyee) and Carousell, filtered to stores that ship to your
   country.
@@ -21,7 +21,8 @@ scores you gave them.
 
 A modular monolith: one FastAPI app with four modules that never import each other, deployed
 as one container on AWS Lambda behind CloudFront. Why this shape rather than microservices:
-[ADR 0001](docs/adr/0001-modular-monolith.md).
+[ADR 0001](docs/adr/0001-modular-monolith.md). How sign-in works without storing anyone's
+data on the server: [ADR 0002](docs/adr/0002-sign-in-session-in-cookie.md).
 
 ```mermaid
 flowchart LR
@@ -42,7 +43,7 @@ flowchart LR
 
 | Module | Routes | Owns |
 | --- | --- | --- |
-| `anime` | `/api/anime/*` | User lists (pass-through, never stored), search, details via an `AnimeSource` interface |
+| `anime` | `/api/anime/*` | User lists (public, or private after MAL sign-in; never stored), search, details via an `AnimeSource` interface |
 | `merch` | `/api/merch` | Store catalogue (`stores.yaml`), store adapters, parallel search with per-store deadlines, link signing |
 | `regions` | `/api/regions/*` | Supported countries and currencies, daily exchange rates |
 | `go` | `/go/{token}` | Verifies the signed link, records the click, redirects |
@@ -60,7 +61,7 @@ plan. The only recurring charge is a few cents a month for container images in E
 ```text
 backend/          FastAPI app (app/), tests, Dockerfile
   app/core/       shared building blocks
-  app/anime/      MyAnimeList integration
+  app/anime/      MyAnimeList lists, search and sign-in
   app/merch/      stores.yaml, adapters/, fan-out service
   app/regions/    countries and exchange rates
   app/go/         click tracking redirect
@@ -109,6 +110,12 @@ Open http://localhost:5173. API docs are at http://localhost:8080/api/docs.
 Without `MAL_CLIENT_ID`, loading a list shows a "not configured" message and search won't
 work; the merch page still works with plain store links. Get a Client ID at
 https://myanimelist.net/apiconfig (choose *non-commercial* while you build).
+
+**To try "Sign in with MyAnimeList" locally,** set your MAL app's *App Redirect URL* to
+`http://localhost:5173/api/anime/auth/callback` and add its Client Secret to `.env` as
+`MAL_CLIENT_SECRET`, then restart the backend. The sign-in button appears once the secret is
+set. Use the Vite address (port 5173), not 8080: the dev server forwards `/api` to the
+backend, so the page and the sign-in cookie share one origin, as they do behind CloudFront.
 
 ## Tests and checks
 
@@ -213,6 +220,10 @@ Do this once; afterwards every merge to `main` deploys itself.
    $key = python -c "import secrets; print(secrets.token_urlsafe(32))"
    aws ssm put-parameter --name /oshiloot/link_signing_key --type SecureString --value $key
    aws ssm put-parameter --name /oshiloot/mal_client_id --type SecureString --value "YOUR_MAL_CLIENT_ID"
+   # for "Sign in with MyAnimeList" (step 7 finishes it):
+   aws ssm put-parameter --name /oshiloot/mal_client_secret --type SecureString --value "YOUR_MAL_CLIENT_SECRET"
+   $sessionKey = python -c "import secrets; print(secrets.token_urlsafe(32))"
+   aws ssm put-parameter --name /oshiloot/session_secret --type SecureString --value $sessionKey
    # optional, once you have them:
    aws ssm put-parameter --name /oshiloot/ebay_client_id --type SecureString --value "..."
    aws ssm put-parameter --name /oshiloot/ebay_client_secret --type SecureString --value "..."
@@ -231,6 +242,19 @@ Do this once; afterwards every merge to `main` deploys itself.
    distribution → pricing plan → Free. CDK can't set pricing plans yet, so this is the one
    manual step.
 
+7. **Turn on "Sign in with MyAnimeList".** Sign-in needs the site's public address, which
+   exists only after the first deploy:
+
+   ```powershell
+   aws ssm put-parameter --name /oshiloot/public_url --type String --value "https://YOUR-SITE.cloudfront.net"
+   ```
+
+   Then set the App Redirect URL of the MAL app whose ID is in SSM to
+   `https://YOUR-SITE.cloudfront.net/api/anime/auth/callback`. A separate MAL app for
+   production keeps `localhost` sign-in working for development. The backend reads SSM when
+   a Lambda instance starts, so the change applies from the next deploy. Until all three
+   sign-in parameters are set, the sign-in button stays hidden.
+
 To remove everything: `npx cdk destroy OshiLootApp OshiLootBase` (the clicks table is kept on
 purpose; delete it in the DynamoDB console if you don't need it).
 
@@ -239,6 +263,9 @@ purpose; delete it in the DynamoDB console if you don't need it).
 | Variable | Used for |
 | --- | --- |
 | `MAL_CLIENT_ID` | MyAnimeList API (lists, search, details) |
+| `MAL_CLIENT_SECRET` | Sign in with MyAnimeList; without it the sign-in button is hidden |
+| `PUBLIC_URL` | The site's address; MAL redirects back to `PUBLIC_URL/api/anime/auth/callback` |
+| `SESSION_SECRET` | Encrypts the sign-in cookie; required in AWS for sign-in |
 | `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET` | eBay Browse API; without them eBay is a plain search link |
 | `EBAY_ENV` | `production` or `sandbox` |
 | `EBAY_CAMPAIGN_ID` | eBay Partner Network commission tracking |
@@ -262,6 +289,9 @@ In AWS, each of these is read from SSM as `/oshiloot/<lowercase name>`.
   users' list data on the server. Lists are passed through and kept only in the browser's
   session storage; request logs record route templates, not usernames. Ask MAL for approval
   before turning on affiliate links.
+- **Signing in** uses MAL's OAuth flow with PKCE. The MAL tokens never touch a database:
+  they live in an encrypted, HttpOnly cookie in the user's browser (scoped to `/api/anime`,
+  31 days), so the backend stays stateless. Signing out deletes the cookie.
 - **Affiliate links** are disclosed in the site footer. Keep that sentence if you change
   the layout.
 - **Search URL templates** in `stores.yaml` were written by hand; only the Carousell
@@ -271,6 +301,6 @@ In AWS, each of these is read from SSM as `/oshiloot/<lowercase name>`.
 
 - [ ] Rakuten Ichiba adapter (official API with affiliate links)
 - [ ] AniList as a second `AnimeSource`
-- [ ] Sign in with MyAnimeList (OAuth with PKCE) for private lists
+- [x] Sign in with MyAnimeList (OAuth with PKCE) for private lists
 - [ ] Load test and p95 latency numbers in this README
 - [ ] Custom domain

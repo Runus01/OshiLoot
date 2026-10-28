@@ -51,8 +51,8 @@ export function CountryDialog() {
                 checked={choice === c.code}
                 onChange={() => setChoice(c.code)}
               />
-              <span>{c.name}</span>
-              <span className="muted">{c.currency}</span>
+              <span className="country-name">{c.name}</span>
+              <span className="country-currency">{c.currency}</span>
             </label>
           ))}
         </fieldset>

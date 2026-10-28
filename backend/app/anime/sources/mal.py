@@ -1,11 +1,20 @@
-"""MyAnimeList API v2 client. Public data needs only the X-MAL-CLIENT-ID header."""
+"""MyAnimeList API v2 client.
+
+Public data needs only the X-MAL-CLIENT-ID header. With a signed-in user's access token,
+the same calls also see private lists (use the username "@me").
+"""
 
 from typing import Any
 
 import httpx
 
 from app.anime.models import Anime, AnimeTitles, ListEntry, ListStatus
-from app.anime.sources.base import AnimeSourceError, SourceNotConfigured, UserNotFound
+from app.anime.sources.base import (
+    AccessTokenRejected,
+    AnimeSourceError,
+    SourceNotConfigured,
+    UserNotFound,
+)
 
 MAL_API = "https://api.myanimelist.net/v2"
 ANIME_FIELDS = "alternative_titles,main_picture,mean,media_type"
@@ -29,20 +38,26 @@ def _to_anime(node: dict[str, Any]) -> Anime:
 
 
 class MalSource:
-    def __init__(self, http: httpx.AsyncClient, client_id: str) -> None:
+    def __init__(
+        self, http: httpx.AsyncClient, client_id: str, access_token: str | None = None
+    ) -> None:
         self._http = http
         self._client_id = client_id
+        self._access_token = access_token
 
     async def _get(self, url: str, params: dict[str, Any] | None = None) -> httpx.Response:
         if not self._client_id:
             raise SourceNotConfigured("MAL_CLIENT_ID is not set")
+        headers = {"X-MAL-CLIENT-ID": self._client_id}
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
         try:
-            response = await self._http.get(
-                url, params=params, headers={"X-MAL-CLIENT-ID": self._client_id}
-            )
+            response = await self._http.get(url, params=params, headers=headers)
         except httpx.HTTPError as exc:
             raise AnimeSourceError("MyAnimeList did not respond") from exc
         if response.status_code == 401:
+            if self._access_token:
+                raise AccessTokenRejected("MyAnimeList rejected the access token")
             raise AnimeSourceError("MyAnimeList rejected the client ID")
         return response
 

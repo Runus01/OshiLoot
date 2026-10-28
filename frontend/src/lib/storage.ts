@@ -43,6 +43,16 @@ export function cacheList(username: string, status: string, value: unknown): voi
   write(session, `oshiloot.list.${username.toLowerCase()}.${status}`, JSON.stringify(value));
 }
 
+export function forgetLists(username: string): void {
+  for (const status of ["completed", "watching"]) {
+    try {
+      session().removeItem(`oshiloot.list.${username.toLowerCase()}.${status}`);
+    } catch {
+      // nothing to forget
+    }
+  }
+}
+
 /** "en-SG" → "SG". */
 export function countryFromLocale(locale: string | undefined): string | null {
   const region = locale?.split("-").at(-1);
