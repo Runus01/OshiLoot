@@ -1,0 +1,74 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time; a newer push waits rather than cancelling a half-finished deploy.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # lets GitHub hand AWS a short-lived OIDC token; no stored AWS keys
+  contents: read
+
+jobs:
+  deploy:
+    # Skipped until AWS is set up: add the AWS_DEPLOY_ROLE_ARN repository variable (README).
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push the backend image
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/oshiloot-backend:${{ github.sha }}
+        run: |
+          # --provenance=false: Lambda rejects the multi-manifest images BuildKit makes by default
+          docker build --platform linux/amd64 --provenance=false -t "$IMAGE" backend
+          docker push "$IMAGE"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Deploy OshiLootApp
+        working-directory: infra
+        run: |
+          npm ci
+          npx cdk deploy OshiLootApp --require-approval never \
+            -c imageTag=${{ github.sha }} -c githubRepo=${{ github.repository }} \
+            --outputs-file outputs.json
+
+      - name: Upload the frontend
+        run: |
+          BUCKET=$(jq -r '.OshiLootApp.SiteBucketName' infra/outputs.json)
+          DISTRIBUTION=$(jq -r '.OshiLootApp.DistributionId' infra/outputs.json)
+          cd frontend
+          npm ci
+          npm run build
+          # Hashed asset files never change, so browsers may cache them for a year;
+          # index.html points at the current ones, so it must always be revalidated.
+          aws s3 sync dist "s3://$BUCKET" --delete --exclude index.html \
+            --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp dist/index.html "s3://$BUCKET/index.html" --cache-control "no-cache"
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" \
+            --paths "/index.html" > /dev/null
+
+      - name: Smoke test
+        run: |
+          URL=$(jq -r '.OshiLootApp.SiteUrl' infra/outputs.json)
+          curl -fsS --retry 6 --retry-delay 10 --retry-all-errors "$URL/api/healthz"
+          echo "Deployed to $URL" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,669 @@
+/*
+  Palette: indigo ink on cool paper, an obi-band crimson for store links (the paper band
+  on Japanese CD and Blu-ray releases), and a hobby-shop price-sticker yellow for prices.
+  Type: Zen Kaku Gothic New, a Japanese gothic, so Japanese titles sit naturally beside English ones.
+*/
+
+:root {
+  --page: #e9ecf5;
+  --surface: #ffffff;
+  --ink: #1a1f3b;
+  --muted: #565d80;
+  --line: #cdd2e3;
+  --obi: #c8243a;
+  --sticker: #ffc53d;
+  --sticker-ink: #1a1f3b;
+  --focus: #3d5afe;
+  --danger: #b3261e;
+
+  --font: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", Meiryo,
+    system-ui, -apple-system, "Segoe UI", sans-serif;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.75rem;
+  --radius: 6px;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #12152a;
+    --surface: #1b1f38;
+    --ink: #eceef8;
+    --muted: #a2a8c6;
+    --line: #2e3456;
+    --obi: #e04a5e;
+    --focus: #8c9eff;
+    --danger: #ff8a80;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+p,
+ul {
+  margin: 0;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Page frame */
+
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.wordmark {
+  font-weight: 900;
+  font-size: var(--step-1);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+
+.country-button {
+  font: inherit;
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.country-button:hover {
+  border-color: var(--ink);
+}
+
+.main {
+  min-height: 60vh;
+}
+
+.footer {
+  margin-top: 80px;
+  padding: 24px 0 48px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--step--1);
+  display: grid;
+  gap: 8px;
+  max-width: 72ch;
+}
+
+/* Controls */
+
+.button,
+.button-quiet {
+  font: inherit;
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding: 0 20px;
+  min-height: 48px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button {
+  background: var(--ink);
+  color: var(--page);
+  border: 0;
+}
+
+.button-quiet {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+
+.button:disabled,
+.button-quiet:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+input:not([type="radio"]) {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  min-height: 48px;
+  padding: 0 14px;
+  width: 100%;
+}
+
+input:not([type="radio"]):hover {
+  border-color: var(--muted);
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+
+.hint {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.loading,
+.empty-note {
+  color: var(--muted);
+  padding: 24px 0;
+}
+
+.empty {
+  padding: 64px 0;
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+/* Home */
+
+.intro {
+  padding: 48px 0 40px;
+  display: grid;
+  gap: 20px;
+}
+
+.headline {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  max-width: 19ch;
+}
+
+.lede {
+  font-size: var(--step-1);
+  color: var(--muted);
+  max-width: 52ch;
+  line-height: 1.5;
+}
+
+.username-form {
+  display: grid;
+  gap: 8px;
+  max-width: 560px;
+}
+
+.username-form label {
+  font-weight: 700;
+}
+
+.tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+
+.tab {
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--step-1);
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  padding: 8px 0;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.tab-count {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Score shelves: the one loud element. Each score is a shelf with its covers standing on it. */
+
+.shelf {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 24px;
+  padding: 32px 0 0;
+}
+
+.shelf-score {
+  display: grid;
+  align-content: start;
+}
+
+.score-numeral {
+  font-size: clamp(4rem, 9vw, 6rem);
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-caption {
+  font-size: var(--step--1);
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.shelf-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 14px;
+  border-bottom: 8px solid var(--line);
+}
+
+.shelf-row > li {
+  flex: 0 0 120px;
+  scroll-snap-align: start;
+}
+
+.cover {
+  display: grid;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.cover img,
+.cover-blank {
+  width: 100%;
+  aspect-ratio: 225 / 318;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--line);
+}
+
+.cover-title {
+  font-size: var(--step--1);
+  font-weight: 500;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cover:hover .cover-title {
+  text-decoration: underline;
+}
+
+.search {
+  padding-top: 64px;
+  display: grid;
+  gap: 16px;
+  max-width: 100%;
+}
+
+.search h2 {
+  font-size: var(--step-2);
+  font-weight: 700;
+}
+
+.search .field-row {
+  max-width: 560px;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 24px 16px;
+}
+
+/* Anime page */
+
+.back-link {
+  display: inline-block;
+  font-size: var(--step--1);
+  font-weight: 500;
+  margin: 8px 0 24px;
+}
+
+.anime-header {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 24px;
+  align-items: end;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+}
+
+.anime-cover {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.anime-title {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  margin-bottom: 8px;
+}
+
+.anime-alt {
+  font-size: var(--step-1);
+  color: var(--muted);
+}
+
+.store-section {
+  padding-top: 40px;
+  display: grid;
+  gap: 16px;
+}
+
+.store-section h2 {
+  font-size: var(--step-2);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.offer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 16px;
+}
+
+.offer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.offer:hover {
+  border-color: var(--ink);
+}
+
+.offer img,
+.offer-blank {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: var(--page);
+  border-radius: 4px;
+}
+
+.offer-title {
+  font-size: var(--step--1);
+  font-weight: 500;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* A hobby-shop price sticker, with a punched hole on the left. */
+.price-tag {
+  position: relative;
+  align-self: flex-start;
+  display: grid;
+  background: var(--sticker);
+  color: var(--sticker-ink);
+  font-weight: 700;
+  padding: 4px 12px 4px 20px;
+  border-radius: 4px 14px 14px 4px;
+  line-height: 1.35;
+}
+
+.price-tag::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.price-converted {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.offer-meta {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Store links wear an obi: the crimson band on Japanese releases. */
+.store-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.store-link {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  height: 100%;
+  padding: 14px 16px 14px 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 10px solid var(--obi);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+.store-link:hover {
+  border-color: var(--obi);
+}
+
+.store-name {
+  font-weight: 700;
+  font-size: var(--step-1);
+}
+
+.store-search {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.store-problem {
+  font-size: 0.8125rem;
+  color: var(--danger);
+  margin-top: 4px;
+}
+
+/* Country dialog */
+
+.country-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  border: 0;
+  border-radius: 12px;
+  padding: 28px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.country-dialog::backdrop {
+  background: rgb(18 21 42 / 0.55);
+}
+
+.country-dialog form {
+  display: grid;
+  gap: 16px;
+}
+
+.country-dialog h2 {
+  font-size: var(--step-2);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.country-grid {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.country-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.country-option span:first-of-type {
+  flex: 1;
+}
+
+.country-option:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--page);
+  font-weight: 700;
+}
+
+.country-option input {
+  accent-color: var(--ink);
+  margin: 0;
+}
+
+/* Stays visible while the country list scrolls on small screens. */
+.dialog-actions {
+  position: sticky;
+  bottom: -28px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0 28px;
+  margin-bottom: -28px;
+  background: var(--surface);
+}
+
+/* Small screens */
+
+@media (max-width: 640px) {
+  .page {
+    padding: 0 16px;
+  }
+
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .field-row {
+    flex-direction: column;
+  }
+
+  .shelf {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .shelf-score {
+    grid-auto-flow: column;
+    justify-content: start;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .score-numeral {
+    font-size: 3.5rem;
+  }
+
+  .anime-header {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .offer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .country-dialog {
+    padding: 20px;
+  }
+
+  .country-option .muted {
+    display: none;
+  }
+}

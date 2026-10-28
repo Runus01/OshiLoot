@@ -1,0 +1,21 @@
+# Runs the backend in the same container image that Lambda runs, with DynamoDB Local
+# standing in for DynamoDB. Start the frontend separately with `npm run dev` in frontend/.
+services:
+  backend:
+    build: ./backend
+    ports: ["8080:8080"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      STORAGE: dynamodb
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
+      AWS_REGION: us-west-2
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    depends_on: [dynamodb]
+    restart: on-failure # retries until DynamoDB Local is ready
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    ports: ["8001:8000"]

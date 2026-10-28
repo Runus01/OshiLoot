@@ -1,0 +1,32 @@
+[project]
+name = "oshiloot-backend"
+version = "0.1.0"
+description = "Modular monolith API for OshiLoot"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+# Module boundaries, checked in CI with `lint-imports`.
+# Feature modules may import app.core, never each other.
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "Feature modules are independent of each other"
+type = "independence"
+modules = ["app.anime", "app.merch", "app.regions", "app.go"]
+
+[[tool.importlinter.contracts]]
+name = "Core does not depend on feature modules"
+type = "forbidden"
+source_modules = ["app.core"]
+forbidden_modules = ["app.anime", "app.merch", "app.regions", "app.go", "app.main"]

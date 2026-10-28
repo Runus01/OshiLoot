@@ -1,0 +1,5 @@
+# Keep line endings as LF in the repo, so Windows checkouts don't break shell steps in CI.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.woff2 binary

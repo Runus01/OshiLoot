@@ -1,0 +1,69 @@
+# Stores the app knows about. Add a store here; add an adapter only if it has an API.
+#
+# type:     ebay_api = live listings through an adapter; linkout = a search link only
+# term:     which title to search with (ja falls back to the main title when missing)
+# ships_to: "*" or a list of country codes; exclude removes countries from "*"
+# markets:  per-country search URLs (the store only appears in those countries)
+#
+# Search URL templates use {q} for the URL-encoded search term. Check each one by
+# running a search on the site and comparing the address bar: only the Carousell SG
+# pattern has been checked against a live example.
+
+stores:
+  - id: ebay
+    name: eBay
+    kind: second_hand
+    type: ebay_api
+    term: en
+    search_url: "https://www.ebay.com/sch/i.html?_nkw={q}"
+
+  - id: cdjapan
+    name: CDJapan
+    kind: official
+    type: linkout
+    term: ja
+    search_url: "https://www.cdjapan.co.jp/searchuni?q={q}"
+    affiliate_template_setting: cdjapan_affiliate_template
+
+  - id: amiami
+    name: AmiAmi
+    kind: official
+    type: linkout
+    term: en
+    search_url: "https://www.amiami.com/eng/search/list/?s_keywords={q}"
+
+  - id: hlj
+    name: HobbyLink Japan
+    kind: official
+    type: linkout
+    term: en
+    search_url: "https://www.hlj.com/search/?q={q}"
+
+  - id: mercari_jp
+    name: Mercari
+    kind: second_hand
+    type: linkout
+    term: ja
+    markets:
+      JP: "https://jp.mercari.com/search?keyword={q}"
+
+  - id: buyee_mercari
+    name: Mercari Japan via Buyee
+    kind: second_hand
+    type: linkout
+    term: ja
+    exclude: [JP]
+    search_url: "https://buyee.jp/mercari/search?keyword={q}"
+
+  - id: carousell
+    name: Carousell
+    kind: second_hand
+    type: linkout
+    term: en
+    markets:
+      SG: "https://www.carousell.sg/search/{q}/"
+      MY: "https://www.carousell.com.my/search/{q}/"
+      HK: "https://www.carousell.com.hk/search/{q}/"
+      PH: "https://www.carousell.ph/search/{q}/"
+      TW: "https://tw.carousell.com/search/{q}/"
+      ID: "https://id.carousell.com/search/{q}/"
