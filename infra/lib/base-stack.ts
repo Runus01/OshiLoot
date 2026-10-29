@@ -54,6 +54,16 @@ export class BaseStack extends Stack {
 
     repository.grantPullPush(deployRole);
 
+    // Lets the deploy workflow sign in to ECR Public, so pulls of the Python and Lambda
+    // adapter base images get the authenticated rate limit instead of the anonymous one.
+    // The token only reads public images; it grants nothing in this account.
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["ecr-public:GetAuthorizationToken", "sts:GetServiceBearerToken"],
+        resources: ["*"],
+      }),
+    );
+
     // `cdk deploy` works by assuming the roles `cdk bootstrap` created.
     deployRole.addToPolicy(
       new iam.PolicyStatement({

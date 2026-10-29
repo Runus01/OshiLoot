@@ -117,6 +117,25 @@ https://myanimelist.net/apiconfig (choose *non-commercial* while you build).
 set. Use the Vite address (port 5173), not 8080: the dev server forwards `/api` to the
 backend, so the page and the sign-in cookie share one origin, as they do behind CloudFront.
 
+**If a base image pull is rate-limited** (`toomanyrequests: Data limit exceeded` from
+`public.ecr.aws`), anonymous pulls from ECR Public are capped at one per second and share a
+data allowance with everyone else on your network. Sign in with any AWS credentials for the
+authenticated allowance, which is ten times higher:
+
+```powershell
+aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+```
+
+No AWS account yet? Build the Python layer from Google's mirror of Docker Hub instead, which
+needs no sign-in:
+
+```powershell
+$env:PYTHON_IMAGE = "mirror.gcr.io/library/python:3.12-slim"
+docker compose up --build
+```
+
+Option A needs no container at all, so it is the quickest way past this.
+
 ## Tests and checks
 
 ```powershell

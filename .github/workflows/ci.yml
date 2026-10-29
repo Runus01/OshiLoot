@@ -28,8 +28,14 @@ jobs:
         run: lint-imports
       - name: Tests
         run: pytest
+      # CI has no AWS credentials, so it can't sign in to ECR Public. Pulling the Python
+      # layer from Google's Docker Hub mirror keeps CI off that anonymous allowance; only
+      # the small Lambda adapter still comes from ECR Public. Deploys sign in instead.
       - name: Container builds
-        run: docker build --provenance=false -t oshiloot-backend .
+        run: |
+          docker build --provenance=false \
+            --build-arg PYTHON_IMAGE=mirror.gcr.io/library/python:3.12-slim \
+            -t oshiloot-backend .
 
   frontend:
     runs-on: ubuntu-latest
