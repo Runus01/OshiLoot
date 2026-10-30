@@ -1,4 +1,5 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router";
+import logo from "./assets/logo.svg";
 import { CountryDialog } from "./components/CountryDialog";
 import { RegionProvider, useRegion } from "./context";
 import { AnimePage } from "./pages/AnimePage";
@@ -34,6 +35,7 @@ function Header() {
   return (
     <header className="header">
       <Link to="/" className="wordmark">
+        <img src={logo} alt="" className="logo-mark" width={44} height={44} />
         OshiLoot
       </Link>
       <button type="button" className="country-button" onClick={openPicker}>
