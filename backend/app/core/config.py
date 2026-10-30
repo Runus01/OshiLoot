@@ -5,6 +5,7 @@ import boto3
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEV_SIGNING_KEY = "dev-only-not-a-secret"
+DEV_SESSION_SECRET = "dev-only-session-secret"
 
 
 class Settings(BaseSettings):
@@ -18,6 +19,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
 
     mal_client_id: str = ""
+    # Only needed for "Sign in with MyAnimeList" (private lists).
+    mal_client_secret: str = ""
+    # The address people open the site at. MAL sends users back to
+    # <public_url>/api/anime/auth/callback, which must match the app's registered redirect URL.
+    public_url: str = "http://localhost:5173"
+    # Encrypts the sign-in cookie. Any string locally; a long random value in AWS.
+    session_secret: str = DEV_SESSION_SECRET
 
     ebay_client_id: str = ""
     ebay_client_secret: str = ""

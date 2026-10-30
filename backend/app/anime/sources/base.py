@@ -15,6 +15,10 @@ class SourceNotConfigured(AnimeSourceError):
     """Credentials for the upstream are missing."""
 
 
+class AccessTokenRejected(AnimeSourceError):
+    """The signed-in user's access token is expired or revoked."""
+
+
 class AnimeSource(Protocol):
     """Anything that can supply anime data. MyAnimeList today; AniList could slot in here."""
 

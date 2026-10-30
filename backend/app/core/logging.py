@@ -1,7 +1,8 @@
 """One JSON log line per request: method, route template, status, duration.
 
 The route template (/api/anime/users/{username}/list) is logged instead of the
-real path, so usernames never reach the logs.
+real path, so usernames never reach the logs. httpx would log every outgoing URL at INFO
+(including MAL usernames), so it only logs warnings.
 """
 
 import json
@@ -15,6 +16,8 @@ logger = logging.getLogger("oshiloot.request")
 
 def configure_logging() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    for noisy in ("httpx", "httpcore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
 class RequestLogMiddleware:

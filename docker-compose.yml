@@ -2,7 +2,11 @@
 # standing in for DynamoDB. Start the frontend separately with `npm run dev` in frontend/.
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      # The app without the Lambda adapter, which does nothing outside Lambda and comes from
+      # a registry that rate-limits anonymous pulls.
+      target: app
     ports: ["8080:8080"]
     env_file:
       - path: .env

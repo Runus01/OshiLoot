@@ -28,8 +28,11 @@ jobs:
         run: lint-imports
       - name: Tests
         run: pytest
+      # Builds the app stage only. The Lambda adapter comes from ECR Public, whose anonymous
+      # pulls fail on shared CI runners (429), and CI has no AWS credentials to sign in.
+      # The deploy workflow signs in and builds the full image.
       - name: Container builds
-        run: docker build --provenance=false -t oshiloot-backend .
+        run: docker build --provenance=false --target app -t oshiloot-backend .
 
   frontend:
     runs-on: ubuntu-latest

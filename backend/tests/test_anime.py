@@ -1,3 +1,5 @@
+import logging
+
 import httpx
 import respx
 from fastapi.testclient import TestClient
@@ -95,3 +97,14 @@ def test_details_and_missing_anime(client: TestClient) -> None:
 def test_missing_client_id_is_503(settings, client: TestClient) -> None:
     client.app.state.settings = settings.model_copy(update={"mal_client_id": ""})
     assert client.get("/api/anime/users/aaron/list").status_code == 503
+
+
+@respx.mock
+def test_logs_never_contain_the_username(client: TestClient, caplog) -> None:
+    caplog.set_level(logging.DEBUG)
+    respx.get(f"{MAL_API}/users/someone_secret/animelist").respond(json={"data": [], "paging": {}})
+    assert client.get("/api/anime/users/someone_secret/list?status=completed").status_code == 200
+    # The test client (httpx2) logs the request it sends; only the app's own logs matter.
+    app_logs = "\n".join(r.getMessage() for r in caplog.records if r.name != "httpx2")
+    assert "/api/anime/users/{username}/list" in app_logs
+    assert "someone_secret" not in app_logs

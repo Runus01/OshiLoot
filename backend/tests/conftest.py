@@ -14,6 +14,9 @@ def settings() -> Settings:
     return Settings(
         _env_file=None,
         mal_client_id="test-mal-id",
+        mal_client_secret="test-mal-secret",
+        session_secret="test-session-secret",
+        public_url="http://localhost:5173",
         link_signing_key="test-signing-key",
         storage="memory",
         ebay_client_id="",

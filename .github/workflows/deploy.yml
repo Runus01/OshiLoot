@@ -32,6 +32,13 @@ jobs:
       - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # The Lambda Web Adapter image is only on ECR Public, where anonymous pulls fail with
+      # "429 ... Data limit exceeded" on shared runners. Signing in lifts that limit.
+      - name: Sign in to ECR Public for the Lambda adapter image
+        run: |
+          aws ecr-public get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin public.ecr.aws
+
       - name: Build and push the backend image
         env:
           IMAGE: ${{ steps.ecr.outputs.registry }}/oshiloot-backend:${{ github.sha }}

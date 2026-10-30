@@ -23,6 +23,19 @@ export interface ListEntry {
   score: number; // 0 = not scored
 }
 
+/** Both lists of the user signed in with MyAnimeList (private lists included). */
+export interface MyLists {
+  username: string;
+  completed: ListEntry[];
+  watching: ListEntry[];
+}
+
+export interface SignInStatus {
+  available: boolean; // sign-in is configured on this server
+  signed_in: boolean;
+  username: string | null;
+}
+
 export interface Money {
   amount: number;
   currency: string;
