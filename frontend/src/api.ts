@@ -1,5 +1,7 @@
 import type {
   Anime,
+  Character,
+  CharacterPage,
   CountriesResponse,
   FxRates,
   ListEntry,
@@ -7,6 +9,9 @@ import type {
   MerchResponse,
   MyLists,
   SignInStatus,
+  SongResponse,
+  ThemeSong,
+  Themes,
 } from "./types";
 
 // Full-page navigations, not fetches: the backend redirects to MyAnimeList and back.
@@ -43,6 +48,17 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function titleParams(anime: Anime, country: string): URLSearchParams {
+  const params = new URLSearchParams({
+    anime_id: String(anime.id),
+    title: anime.titles.main,
+    country,
+  });
+  if (anime.titles.en) params.set("title_en", anime.titles.en);
+  if (anime.titles.ja) params.set("title_ja", anime.titles.ja);
+  return params;
+}
+
 let myListsInFlight: Promise<MyLists> | null = null;
 
 export const api = {
@@ -70,15 +86,49 @@ export const api = {
 
   anime: (id: number, signal?: AbortSignal) => getJson<Anime>(`/api/anime/${id}`, signal),
 
-  merch: (anime: Anime, country: string, signal?: AbortSignal) => {
+  merch: (anime: Anime, country: string, signal?: AbortSignal) =>
+    getJson<MerchResponse>(`/api/merch?${titleParams(anime, country)}`, signal),
+
+  characters: (animeId: number, page: number, signal?: AbortSignal) =>
+    getJson<CharacterPage>(`/api/anime/${animeId}/characters?page=${page}`, signal),
+
+  character: (characterId: number, signal?: AbortSignal) =>
+    getJson<Character>(`/api/anime/characters/${characterId}`, signal),
+
+  /** Merch for one character. The cast lets the server tell solo items from group ones. */
+  characterMerch: (
+    anime: Anime,
+    character: Character,
+    cast: Character[],
+    country: string,
+    signal?: AbortSignal,
+  ) => {
+    const params = titleParams(anime, country);
+    params.set("character_id", String(character.id));
+    params.set("character", character.name);
+    if (character.name_native) params.set("character_ja", character.name_native);
+    for (const member of cast.slice(0, 50)) {
+      if (member.id !== character.id) {
+        params.append("cast", member.name_native ? `${member.name}|${member.name_native}` : member.name);
+      }
+    }
+    return getJson<MerchResponse>(`/api/merch/character?${params}`, signal);
+  },
+
+  themes: (animeId: number, signal?: AbortSignal) =>
+    getJson<Themes>(`/api/anime/${animeId}/themes`, signal),
+
+  song: (animeId: number, theme: ThemeSong, country: string, signal?: AbortSignal) => {
     const params = new URLSearchParams({
-      anime_id: String(anime.id),
-      title: anime.titles.main,
+      anime_id: String(animeId),
+      theme_id: String(theme.id),
+      title: theme.title,
+      artist: theme.artist || theme.artist_native || "Unknown",
       country,
     });
-    if (anime.titles.en) params.set("title_en", anime.titles.en);
-    if (anime.titles.ja) params.set("title_ja", anime.titles.ja);
-    return getJson<MerchResponse>(`/api/merch?${params}`, signal);
+    if (theme.title_native) params.set("title_native", theme.title_native);
+    if (theme.artist_native) params.set("artist_native", theme.artist_native);
+    return getJson<SongResponse>(`/api/music/song?${params}`, signal);
   },
 
   countries: () => getJson<CountriesResponse>("/api/regions/countries"),

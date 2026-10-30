@@ -8,13 +8,14 @@ from typing import Any
 
 import httpx
 
-from app.anime.models import Anime, AnimeTitles, ListEntry, ListStatus
+from app.anime.models import Anime, AnimeTitles, ListEntry, ListStatus, Themes
 from app.anime.sources.base import (
     AccessTokenRejected,
     AnimeSourceError,
     SourceNotConfigured,
     UserNotFound,
 )
+from app.anime.themes import parse_theme
 
 MAL_API = "https://api.myanimelist.net/v2"
 ANIME_FIELDS = "alternative_titles,main_picture,mean,media_type"
@@ -107,3 +108,19 @@ class MalSource:
         if response.status_code != 200:
             raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
         return _to_anime(response.json())
+
+    async def themes(self, anime_id: int) -> Themes | None:
+        # Not in MAL's API docs, but the anime endpoint returns both fields when asked.
+        response = await self._get(
+            f"{MAL_API}/anime/{anime_id}", {"fields": "opening_themes,ending_themes"}
+        )
+        if response.status_code == 404:
+            return None
+        if response.status_code != 200:
+            raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
+        body = response.json()
+        return Themes(
+            anime_id=anime_id,
+            openings=[parse_theme(t, "opening") for t in body.get("opening_themes") or []],
+            endings=[parse_theme(t, "ending") for t in body.get("ending_themes") or []],
+        )

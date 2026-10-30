@@ -23,10 +23,10 @@ root_package = "app"
 [[tool.importlinter.contracts]]
 name = "Feature modules are independent of each other"
 type = "independence"
-modules = ["app.anime", "app.merch", "app.regions", "app.go"]
+modules = ["app.anime", "app.merch", "app.music", "app.regions", "app.go"]
 
 [[tool.importlinter.contracts]]
 name = "Core does not depend on feature modules"
 type = "forbidden"
 source_modules = ["app.core"]
-forbidden_modules = ["app.anime", "app.merch", "app.regions", "app.go", "app.main"]
+forbidden_modules = ["app.anime", "app.merch", "app.music", "app.regions", "app.go", "app.main"]

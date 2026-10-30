@@ -28,11 +28,14 @@ async def go(
     if not url.startswith("https://"):
         raise HTTPException(400, "This link is invalid or has been changed.")
 
-    # Store, anime and country only: nothing that identifies the person clicking.
+    # Store, anime, country, and the character or song when there is one: nothing that
+    # identifies the person clicking.
+    event = {"store": payload.get("s"), "anime_id": payload.get("a"), "country": payload.get("c")}
+    for key, name in (("ch", "character_id"), ("th", "theme_id")):
+        if payload.get(key):
+            event[name] = payload[key]
     try:
-        await clicks.append(
-            {"store": payload.get("s"), "anime_id": payload.get("a"), "country": payload.get("c")}
-        )
+        await clicks.append(event)
     except Exception:
         logger.exception("could not record click")  # never block the redirect
 

@@ -180,7 +180,7 @@ img {
   cursor: progress;
 }
 
-input:not([type="radio"]) {
+input:not([type="radio"], [type="checkbox"]) {
   font: inherit;
   color: var(--ink);
   background: var(--surface);
@@ -191,7 +191,7 @@ input:not([type="radio"]) {
   width: 100%;
 }
 
-input:not([type="radio"]):hover {
+input:not([type="radio"], [type="checkbox"]):hover {
   border-color: var(--muted);
 }
 
@@ -541,6 +541,14 @@ input:not([type="radio"]):hover {
   color: var(--muted);
 }
 
+/* Japanese has no spaces between words: break search terms at the space between the
+   title and the name rather than mid-word, unless a term is too long to fit at all. */
+.store-search [lang="ja"],
+.shop-links [lang="ja"] {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 .store-problem {
   font-size: 0.8125rem;
   color: var(--danger);
@@ -632,6 +640,442 @@ input:not([type="radio"]):hover {
   background: var(--surface);
 }
 
+/* Characters: portrait cards, like a row of trading cards on the anime page */
+
+.kicker {
+  font-size: var(--step--1);
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.characters-section,
+.themes-section {
+  padding-top: 40px;
+  display: grid;
+  gap: 16px;
+}
+
+.characters-section h2,
+.themes-section h2 {
+  font-size: var(--step-2);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.character-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(112px, 11vw, 160px), 1fr));
+  gap: clamp(16px, 2vw, 24px) clamp(12px, 1.5vw, 20px);
+}
+
+.character-card {
+  display: grid;
+  gap: 2px;
+  text-decoration: none;
+}
+
+.character-card img,
+.character-blank {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--line);
+  margin-bottom: 6px;
+}
+
+.character-card:hover img {
+  outline: 3px solid var(--obi);
+  outline-offset: 2px;
+}
+
+.character-name {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.character-card:hover .character-name {
+  text-decoration: underline;
+}
+
+.character-native,
+.character-role {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.more-button {
+  justify-self: start;
+}
+
+/* A character's own page */
+
+.character-header {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 24px;
+  align-items: end;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+}
+
+.character-portrait {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--line);
+}
+
+.offer-with {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--obi);
+  line-height: 1.4;
+}
+
+/* Shops to visit in person */
+
+.shop-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
+}
+
+.shop {
+  height: 100%;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 6px solid var(--ink);
+  border-radius: var(--radius);
+}
+
+.shop-name {
+  font-size: var(--step-1);
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.shop-note {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.outlets {
+  display: grid;
+  gap: 10px;
+}
+
+.outlet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: baseline;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.outlet-name {
+  font-weight: 700;
+}
+
+.outlet-address {
+  grid-column: 1;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.outlet-map {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: var(--step--1);
+  font-weight: 700;
+}
+
+.shop-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: var(--step--1);
+  font-weight: 500;
+}
+
+/* Theme songs: rows with a play mark, as on MyAnimeList */
+
+.theme-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 24px 40px;
+}
+
+.theme-heading {
+  font-size: var(--step-1);
+  font-weight: 700;
+  padding-bottom: 8px;
+  margin: 0 0 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.theme-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hover-toggle {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--step--1);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.hover-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+/* Phones and tablets can't hover, so the play buttons are the way in there. */
+@media (hover: none) {
+  .hover-toggle {
+    display: none;
+  }
+}
+
+/* Each row: play button, the song (a link to its page), and Apple's badge once looked up. */
+.theme-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius);
+}
+
+.theme-row:hover,
+.theme-row[data-state] {
+  background: var(--surface);
+}
+
+.theme-play {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.theme-row:hover .theme-play,
+.theme-play:focus-visible,
+.theme-row[data-state] .theme-play {
+  color: var(--obi);
+}
+
+.theme-row[data-state="loading"] .theme-play {
+  animation: preview-loading 0.8s ease-in-out infinite alternate;
+}
+
+.theme-play:disabled {
+  color: var(--muted);
+  opacity: 0.35;
+  cursor: default;
+}
+
+.theme-link {
+  padding: 8px 0;
+  text-decoration: none;
+}
+
+.theme-link:hover .theme-title {
+  text-decoration: underline;
+}
+
+.theme-badge img {
+  display: block;
+  width: auto;
+  height: 28px;
+}
+
+/* Three bars bouncing beside the song that's playing. */
+.now-playing {
+  display: inline-block;
+  width: 13px;
+  height: 12px;
+  margin-left: 8px;
+  vertical-align: -1px;
+  background:
+    linear-gradient(var(--obi), var(--obi)) 0 100% / 3px 40% no-repeat,
+    linear-gradient(var(--obi), var(--obi)) 5px 100% / 3px 100% no-repeat,
+    linear-gradient(var(--obi), var(--obi)) 10px 100% / 3px 60% no-repeat;
+  animation: now-playing 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes now-playing {
+  0% {
+    background-size: 3px 40%, 3px 100%, 3px 60%;
+  }
+  50% {
+    background-size: 3px 100%, 3px 45%, 3px 30%;
+  }
+  100% {
+    background-size: 3px 55%, 3px 30%, 3px 100%;
+  }
+}
+
+@keyframes preview-loading {
+  to {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .now-playing,
+  .theme-row[data-state="loading"] .theme-play {
+    animation: none;
+  }
+}
+
+.play-icon {
+  flex: none;
+}
+
+.theme-number,
+.theme-eps {
+  color: var(--muted);
+}
+
+.theme-title {
+  font-weight: 700;
+}
+
+/* A theme song's page */
+
+.song-header {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+}
+
+.song-artist {
+  font-size: var(--step-1);
+}
+
+.preview {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-width: 760px;
+}
+
+.preview-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 6px;
+}
+
+.preview-body {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.preview-track {
+  font-weight: 700;
+}
+
+.preview-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--page);
+  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 20px 8px 10px;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.preview-button .play-icon {
+  color: var(--page);
+}
+
+.preview-progress {
+  display: block;
+  width: min(100%, 320px);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.preview-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--obi);
+}
+
+.preview-buy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.apple-badge img {
+  width: 150px;
+  height: auto;
+}
+
+.credit {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.subheading {
+  font-size: var(--step-1);
+  font-weight: 700;
+  margin: 8px 0 0;
+}
+
+.release-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 16px;
+}
+
 /* Small screens */
 
 @media (max-width: 640px) {
@@ -662,6 +1106,29 @@ input:not([type="radio"]):hover {
   .anime-header {
     grid-template-columns: 96px minmax(0, 1fr);
     gap: 16px;
+  }
+
+  .character-header {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .character-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .preview {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .preview-art {
+    max-width: 200px;
+  }
+
+  .release-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .offer-grid {

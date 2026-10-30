@@ -6,8 +6,8 @@
 # markets:  per-country search URLs (the store only appears in those countries)
 #
 # Search URL templates use {q} for the URL-encoded search term. Check each one by
-# running a search on the site and comparing the address bar: only the Carousell SG
-# pattern has been checked against a live example.
+# running a search on the site and comparing the address bar. Checked against a live
+# example: Carousell SG, CDJapan, Otaku House and Kinokuniya Singapore.
 
 stores:
   - id: ebay
@@ -67,3 +67,50 @@ stores:
       PH: "https://www.carousell.ph/search/{q}/"
       TW: "https://tw.carousell.com/search/{q}/"
       ID: "https://id.carousell.com/search/{q}/"
+
+  # Singapore's own online anime shop. Its physical stores (Plaza Singapura, VivoCity) have
+  # closed. The site blocks automated checks, so this pattern is unverified.
+  - id: hakken
+    name: Hakken!
+    kind: official
+    type: linkout
+    term: en
+    markets:
+      SG: "https://www.hakkenonline.com/search/?q={q}"
+
+# Shops to visit in person, by country code. Outlets open and close, so these were checked
+# in October 2026 against each shop's own site or recent news; re-check before relying on
+# them. search_url is the shop's online store, if it has one ({q} as above).
+shops:
+  SG:
+    - id: la_tendo
+      name: La Tendo
+      note: Figures, gashapon, plushies and anime goods. The AmiAmi Singapore store is inside.
+      website: "https://latendo.com/"
+      outlets:
+        - name: Suntec City
+          address: "3 Temasek Boulevard, #03-354, Suntec City, Singapore 038983"
+
+    - id: otaku_house
+      name: Otaku House
+      note: Anime merchandise, figures and collaboration goods.
+      website: "https://shop.otakuhouse.com/"
+      search_url: "https://shop.otakuhouse.com/search?q={q}"
+      outlets:
+        - name: Suntec City
+          address: "3 Temasek Boulevard, #02-489, Suntec City, Singapore 038983"
+        - name: Jewel Changi Airport
+          address: "78 Airport Boulevard, #04-240, Jewel Changi Airport, Singapore 819666"
+
+    - id: kinokuniya
+      name: Books Kinokuniya
+      note: Manga, light novels, art books and character goods.
+      website: "https://kinokuniya.com.sg/"
+      search_url: "https://kinokuniya.com.sg/search?q={q}"
+      outlets:
+        - name: Ngee Ann City (main store)
+          address: "391 Orchard Road, #04-20, Ngee Ann City, Singapore 238872"
+        - name: Bugis Junction
+          address: "200 Victoria Street, #03-09, Bugis Junction, Singapore 188021"
+        - name: Raffles City
+          address: "Level 3, Raffles City Shopping Centre, 252 North Bridge Road, Singapore 179103"

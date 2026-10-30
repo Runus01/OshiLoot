@@ -1,13 +1,16 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
-from urllib.parse import quote, urlsplit
+from typing import Any, Literal
+from urllib.parse import quote
 
 import yaml
 from pydantic import BaseModel
 
 from app.core.config import Settings
+from app.core.links import affiliate_url, search_url
 from app.merch.models import StoreKind, Titles
+
+MAPS_SEARCH = "https://www.google.com/maps/search/?api=1&query="
 
 
 class StoreDef(BaseModel):
@@ -38,23 +41,50 @@ class StoreDef(BaseModel):
         template = self.markets.get(country) or self.search_url
         if template is None:
             return None
-        return template.replace("{q}", quote(term, safe=""))
+        return search_url(template, term)
 
     def affiliate_wrap(self, url: str, settings: Settings) -> tuple[str, bool]:
         """Return (url, is_affiliate). Templates use {url} (encoded) or {path} (after the host)."""
         template = getattr(settings, self.affiliate_template_setting or "", "") or ""
-        if not template:
-            return url, False
-        parts = urlsplit(url)
-        path = parts.path + (f"?{parts.query}" if parts.query else "")
-        wrapped = template.replace("{url}", quote(url, safe="")).replace("{path}", path)
-        return wrapped, True
+        return affiliate_url(url, template)
+
+
+class OutletDef(BaseModel):
+    name: str
+    address: str
+
+
+class ShopDef(BaseModel):
+    """A shop people can visit in person. Listed per country in stores.yaml under shops."""
+
+    id: str
+    name: str
+    note: str | None = None
+    website: str
+    search_url: str | None = None
+    outlets: list[OutletDef]
+
+    def map_query(self, outlet: OutletDef) -> str:
+        return MAPS_SEARCH + quote(f"{self.name}, {outlet.address}", safe="")
 
 
 CATALOG_PATH = Path(__file__).with_name("stores.yaml")
 
 
 @lru_cache
+def _catalog_file() -> dict[str, Any]:
+    return yaml.safe_load(CATALOG_PATH.read_text(encoding="utf-8"))
+
+
+@lru_cache
 def load_catalog() -> tuple[StoreDef, ...]:
-    data = yaml.safe_load(CATALOG_PATH.read_text(encoding="utf-8"))
-    return tuple(StoreDef.model_validate(s) for s in data["stores"])
+    return tuple(StoreDef.model_validate(s) for s in _catalog_file()["stores"])
+
+
+@lru_cache
+def load_shops() -> dict[str, tuple[ShopDef, ...]]:
+    shops = _catalog_file().get("shops") or {}
+    return {
+        country: tuple(ShopDef.model_validate(s) for s in entries)
+        for country, entries in shops.items()
+    }

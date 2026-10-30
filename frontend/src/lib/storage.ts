@@ -58,3 +58,9 @@ export function countryFromLocale(locale: string | undefined): string | null {
   const region = locale?.split("-").at(-1);
   return region && /^[A-Z]{2}$/.test(region) ? region : null;
 }
+
+const HOVER_PREVIEWS_KEY = "oshiloot.hoverPreviews";
+
+/** Whether theme songs play when the mouse rests on them. On unless turned off. */
+export const hoverPreviewsOn = () => read(local, HOVER_PREVIEWS_KEY) !== "off";
+export const saveHoverPreviews = (on: boolean) => write(local, HOVER_PREVIEWS_KEY, on ? "on" : "off");

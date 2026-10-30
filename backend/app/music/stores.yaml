@@ -1,0 +1,20 @@
+# Stores that sell anime CDs (singles and albums) and vinyl, as search links.
+#
+# term: ja searches "アーティスト 曲名" (falls back to the romanised name); en searches
+#       "Artist Title". Search URL templates use {q} for the URL-encoded term.
+# Checked against a live search: CDJapan. Tower Records Japan blocks automated checks,
+# so its pattern is unverified; try a search on the site and compare the address bar.
+
+stores:
+  - id: cdjapan
+    name: CDJapan
+    note: Ships worldwide. Singles, albums, limited editions and vinyl.
+    term: ja
+    search_url: "https://www.cdjapan.co.jp/searchuni?q={q}"
+    affiliate_template_setting: cdjapan_affiliate_template
+
+  - id: tower_jp
+    name: Tower Records Japan
+    note: Japan's largest music chain. Check overseas delivery at checkout.
+    term: ja
+    search_url: "https://tower.jp/search/item/{q}"
