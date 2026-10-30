@@ -1,20 +1,17 @@
-# Base images come from ECR Public rather than Docker Hub, which rate-limits anonymous pulls
-# hard. ECR Public has limits too (1 pull/s and a shared data allowance when anonymous, 10/s
-# once authenticated), so CI and the deploy workflow sign in first. Both images are
-# overridable: a build with no AWS credentials can point PYTHON_IMAGE at another mirror.
-ARG PYTHON_IMAGE=public.ecr.aws/docker/library/python:3.12-slim
+# The Python base comes from Google's mirror of Docker Hub, which needs no sign-in. The Lambda
+# Web Adapter is only published on ECR Public, where anonymous pulls are capped at 1/s with a
+# shared data allowance that busy CI runners use up ("429 ... Data limit exceeded"). So only
+# the deploy workflow pulls the adapter, after signing in to ECR Public.
+ARG PYTHON_IMAGE=mirror.gcr.io/library/python:3.12-slim
 ARG ADAPTER_IMAGE=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0
 
 FROM ${ADAPTER_IMAGE} AS adapter
 
-FROM ${PYTHON_IMAGE}
+# The app on its own. CI and docker compose build only this stage (--target app), so they
+# never reach ECR Public. BuildKit skips stages the target doesn't depend on.
+FROM ${PYTHON_IMAGE} AS app
 
-# Does nothing outside Lambda. On Lambda it turns each invocation into an HTTP request to uvicorn.
-COPY --from=adapter /lambda-adapter /opt/extensions/lambda-adapter
-
-ENV AWS_LWA_PORT=8080 \
-    AWS_LWA_READINESS_CHECK_PATH=/api/healthz \
-    PYTHONDONTWRITEBYTECODE=1 \
+ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
@@ -26,3 +23,11 @@ EXPOSE 8080
 # --no-access-log: uvicorn's access log prints full paths, which include MAL usernames.
 # The app logs route templates instead (app/core/logging.py).
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--no-access-log"]
+
+# What Lambda runs, and the default target: the app plus the Lambda Web Adapter extension,
+# which turns each invocation into an HTTP request to uvicorn.
+FROM app AS lambda
+
+COPY --from=adapter /lambda-adapter /opt/extensions/lambda-adapter
+ENV AWS_LWA_PORT=8080 \
+    AWS_LWA_READINESS_CHECK_PATH=/api/healthz

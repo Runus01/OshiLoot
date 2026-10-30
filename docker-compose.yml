@@ -4,10 +4,9 @@ services:
   backend:
     build:
       context: ./backend
-      # Set PYTHON_IMAGE to another mirror (e.g. mirror.gcr.io/library/python:3.12-slim)
-      # if an anonymous ECR Public pull is rate-limited. See README, "Run it locally".
-      args:
-        PYTHON_IMAGE: ${PYTHON_IMAGE:-public.ecr.aws/docker/library/python:3.12-slim}
+      # The app without the Lambda adapter, which does nothing outside Lambda and comes from
+      # a registry that rate-limits anonymous pulls.
+      target: app
     ports: ["8080:8080"]
     env_file:
       - path: .env

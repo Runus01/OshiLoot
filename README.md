@@ -117,24 +117,18 @@ https://myanimelist.net/apiconfig (choose *non-commercial* while you build).
 set. Use the Vite address (port 5173), not 8080: the dev server forwards `/api` to the
 backend, so the page and the sign-in cookie share one origin, as they do behind CloudFront.
 
-**If a base image pull is rate-limited** (`toomanyrequests: Data limit exceeded` from
-`public.ecr.aws`), anonymous pulls from ECR Public are capped at one per second and share a
-data allowance with everyone else on your network. Sign in with any AWS credentials for the
-authenticated allowance, which is ten times higher:
+**About the container images:** the Python base comes from Google's mirror of Docker Hub,
+which needs no sign-in. The Lambda Web Adapter is published only on Amazon ECR Public, which
+caps anonymous pulls and often refuses busy networks with `429 ... Data limit exceeded`. So
+Docker Compose and CI build the `app` stage of the Dockerfile, which leaves the adapter out
+(it does nothing outside Lambda), and only the deploy workflow builds the full image, after
+signing in to ECR Public. To build the full image yourself, sign in first with any AWS
+credentials:
 
 ```powershell
 aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+docker build --provenance=false -t oshiloot-backend backend
 ```
-
-No AWS account yet? Build the Python layer from Google's mirror of Docker Hub instead, which
-needs no sign-in:
-
-```powershell
-$env:PYTHON_IMAGE = "mirror.gcr.io/library/python:3.12-slim"
-docker compose up --build
-```
-
-Option A needs no container at all, so it is the quickest way past this.
 
 ## Tests and checks
 

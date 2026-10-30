@@ -32,9 +32,9 @@ jobs:
       - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Anonymous ECR Public pulls are capped at 1/s and share a data allowance, which fails
-      # with "toomanyrequests: Data limit exceeded". Signing in raises the cap to 10/s.
-      - name: Sign in to ECR Public for base images
+      # The Lambda Web Adapter image is only on ECR Public, where anonymous pulls fail with
+      # "429 ... Data limit exceeded" on shared runners. Signing in lifts that limit.
+      - name: Sign in to ECR Public for the Lambda adapter image
         run: |
           aws ecr-public get-login-password --region us-east-1 \
             | docker login --username AWS --password-stdin public.ecr.aws
