@@ -1,4 +1,4 @@
-"""One FastAPI app, four modules. Each module owns its routes and may only import app.core."""
+"""One FastAPI app, five modules. Each module owns its routes and may only import app.core."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI
 
-from app import anime, go, merch, regions
+from app import anime, go, merch, music, regions
 from app.core.config import Settings, get_settings
 from app.core.logging import RequestLogMiddleware, configure_logging
 from app.core.storage import build_storage
@@ -36,7 +36,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.add_middleware(RequestLogMiddleware)
 
-    for module in (anime, merch, regions, go):
+    for module in (anime, merch, music, regions, go):
         app.include_router(module.router)
 
     @app.get("/api/healthz", tags=["health"])

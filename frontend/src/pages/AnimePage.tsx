@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { api, ApiError } from "../api";
+import { CharacterCard } from "../components/CharacterCard";
+import { OfferGrid, ShopsSection, StoreLinks } from "../components/Offers";
+import { ThemesSection } from "../components/ThemeSongs";
 import { useRegion } from "../context";
-import { describePrice, formatMoney } from "../lib/money";
-import type { Anime, Country, FxRates, MerchResponse, Offer, StoreKind, StoreResult } from "../types";
+import type { Anime, Character, MerchResponse, StoreKind } from "../types";
 
 const SECTIONS: { kind: StoreKind; title: string; note: string }[] = [
   { kind: "official", title: "Official stores", note: "New, licensed merchandise." },
@@ -79,6 +81,8 @@ export function AnimePage() {
         </div>
       </header>
 
+      <CharactersSection anime={anime} />
+
       {!country && <p className="loading">Choose your country to see stores that ship to you.</p>}
       {country && !merch && <p className="loading">Checking stores that ship to {country.name}…</p>}
       {country &&
@@ -86,92 +90,98 @@ export function AnimePage() {
         SECTIONS.map(({ kind, title, note }) => {
           const stores = merch.stores.filter((s) => s.kind === kind);
           if (stores.length === 0) return null;
+          const items = stores.flatMap((store) => store.offers.map((offer) => ({ store, offer })));
           return (
             <section key={kind} className="store-section" aria-labelledby={`section-${kind}`}>
               <h2 id={`section-${kind}`}>{title}</h2>
               <p className="muted">{note}</p>
-              <OfferGrid stores={stores} country={country} fx={fx} />
-              <ul className="store-links">
-                {stores.map((store) => (
-                  <StoreLink key={store.store} store={store} />
-                ))}
-              </ul>
+              <OfferGrid items={items} country={country} fx={fx} />
+              <StoreLinks stores={stores} />
             </section>
           );
         })}
+      {country && merch && <ShopsSection shops={merch.shops} country={country} />}
+
+      <ThemesSection anime={anime} />
     </article>
   );
 }
 
-function OfferGrid({ stores, country, fx }: { stores: StoreResult[]; country: Country; fx: FxRates | null }) {
-  const offers = stores.flatMap((store) => store.offers.map((offer) => ({ store, offer })));
-  if (offers.length === 0) return null;
-  return (
-    <ul className="offer-grid">
-      {offers.map(({ store, offer }) => (
-        <li key={offer.url}>
-          <OfferCard offer={offer} storeName={store.name} country={country} fx={fx} />
-        </li>
-      ))}
-    </ul>
-  );
-}
+const STEP = 12; // characters shown at first, and added per "Show more"
 
-function OfferCard({
-  offer,
-  storeName,
-  country,
-  fx,
-}: {
-  offer: Offer;
-  storeName: string;
-  country: Country;
-  fx: FxRates | null;
-}) {
-  const price = offer.price && describePrice(offer.price, country.currency, fx);
+function CharactersSection({ anime }: { anime: Anime }) {
+  const [characters, setCharacters] = useState<Character[] | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [visible, setVisible] = useState(STEP);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setCharacters(null);
+    setError(null);
+    setPage(1);
+    setVisible(STEP);
+    api
+      .characters(anime.id, 1, controller.signal)
+      .then((res) => {
+        setCharacters(res.characters);
+        setHasNext(res.has_next_page);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") setError(err instanceof ApiError ? err.message : "Couldn't load characters.");
+      });
+    return () => controller.abort();
+  }, [anime.id]);
+
+  if (error) {
+    return (
+      <section className="characters-section" aria-labelledby="section-characters">
+        <h2 id="section-characters">Characters</h2>
+        <p className="error">{error}</p>
+      </section>
+    );
+  }
+  if (characters === null) return <p className="loading">Loading characters…</p>;
+  if (characters.length === 0) return null;
+
+  const canShowMore = visible < characters.length || hasNext;
+  const showMore = async () => {
+    if (visible + STEP <= characters.length || !hasNext) {
+      setVisible((v) => v + STEP);
+      return;
+    }
+    setLoadingMore(true);
+    try {
+      const next = await api.characters(anime.id, page + 1);
+      setCharacters([...characters, ...next.characters]);
+      setHasNext(next.has_next_page);
+      setPage(page + 1);
+      setVisible((v) => v + STEP);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't load more characters.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   return (
-    <a className="offer" href={offer.url} target="_blank" rel="noopener sponsored">
-      {offer.image ? <img src={offer.image} alt="" loading="lazy" /> : <span className="offer-blank" aria-hidden="true" />}
-      <span className="offer-title">{offer.title}</span>
-      {price && (
-        <span className="price-tag">
-          {price.original}
-          {price.converted && <span className="price-converted">{price.converted}</span>}
-        </span>
+    <section className="characters-section" aria-labelledby="section-characters">
+      <h2 id="section-characters">Characters</h2>
+      <p className="muted">Pick your oshi to see merch of just them, or of them with the rest of the cast.</p>
+      <ul className="character-grid">
+        {characters.slice(0, visible).map((character) => (
+          <li key={character.id}>
+            <CharacterCard anime={anime} character={character} cast={characters} />
+          </li>
+        ))}
+      </ul>
+      {canShowMore && (
+        <button type="button" className="button-quiet more-button" onClick={showMore} disabled={loadingMore}>
+          {loadingMore ? "Loading…" : "Show more characters"}
+        </button>
       )}
-      <span className="offer-meta">{shippingText(offer, country)}</span>
-      <span className="offer-meta">
-        {storeName}
-        {offer.condition ? `, ${offer.condition.toLowerCase()}` : ""}
-      </span>
-    </a>
-  );
-}
-
-function shippingText(offer: Offer, country: Country): string {
-  if (!offer.shipping) return `Shipping to ${country.name} shown at checkout`;
-  if (offer.shipping.amount === 0) return `Free shipping to ${country.name}`;
-  return `${formatMoney(offer.shipping.amount, offer.shipping.currency)} shipping to ${country.name}`;
-}
-
-function StoreLink({ store }: { store: StoreResult }) {
-  if (!store.search_url) return null;
-  const problem =
-    store.status === "timeout"
-      ? `${store.name} didn't answer in time, so live listings are missing. Its own search still works.`
-      : store.status === "error"
-        ? `${store.name} returned an error, so live listings are missing. Its own search still works.`
-        : null;
-  return (
-    <li>
-      <a className="store-link" href={store.search_url} target="_blank" rel="noopener sponsored">
-        <span className="store-name">{store.name}</span>
-        <span className="store-search">
-          Search for <span lang={/[぀-ヿ一-龯]/.test(store.search_term) ? "ja" : undefined}>{store.search_term}</span>
-        </span>
-        {problem && <span className="store-problem">{problem}</span>}
-        <span className="visually-hidden">(opens {store.name} in a new tab)</span>
-      </a>
-    </li>
+    </section>
   );
 }

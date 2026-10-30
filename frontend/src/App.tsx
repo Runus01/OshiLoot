@@ -2,7 +2,9 @@ import { BrowserRouter, Link, Route, Routes } from "react-router";
 import { CountryDialog } from "./components/CountryDialog";
 import { RegionProvider, useRegion } from "./context";
 import { AnimePage } from "./pages/AnimePage";
+import { CharacterRoute } from "./pages/CharacterPage";
 import { Home } from "./pages/Home";
+import { SongRoute } from "./pages/SongPage";
 
 export function App() {
   return (
@@ -14,6 +16,8 @@ export function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/anime/:id" element={<AnimePage />} />
+              <Route path="/anime/:id/character/:characterId" element={<CharacterRoute />} />
+              <Route path="/anime/:id/song/:themeId" element={<SongRoute />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
@@ -47,7 +51,10 @@ function Footer() {
         commission at no extra cost to you. Prices and shipping change often, so check the
         store before you pay.
       </p>
-      <p>Anime data from MyAnimeList. Not affiliated with MyAnimeList or any store.</p>
+      <p>
+        Anime and theme song data from MyAnimeList. Character data from AniList. Song previews courtesy of iTunes. Not
+        affiliated with MyAnimeList, AniList, Apple or any store.
+      </p>
     </footer>
   );
 }

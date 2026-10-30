@@ -39,3 +39,48 @@ class SignInStatus(BaseModel):
     available: bool  # is sign-in configured on this server?
     signed_in: bool
     username: str | None = None
+
+
+CharacterRole = Literal["main", "supporting", "background"]
+
+
+class Character(BaseModel):
+    """A character, from AniList. id is AniList's character ID."""
+
+    id: int
+    name: str
+    name_native: str | None = None
+    alternative: list[str] = []
+    image: str | None = None
+    role: CharacterRole | None = None  # their role in this anime; None when looked up alone
+
+
+class CharacterPage(BaseModel):
+    anime_id: int
+    page: int
+    characters: list[Character]
+    has_next_page: bool
+
+
+ThemeKind = Literal["opening", "ending"]
+
+
+class ThemeSong(BaseModel):
+    """An opening or ending theme, parsed from MyAnimeList's one-line description:
+    #1: "Yuusha (勇者)" by YOASOBI (eps 1-16)"""
+
+    id: int  # MyAnimeList's theme ID
+    kind: ThemeKind
+    number: str | None = None  # "1", or "S1" for specials
+    title: str
+    title_native: str | None = None
+    artist: str
+    artist_native: str | None = None
+    episodes: str | None = None  # "eps 1-16"
+    text: str  # MyAnimeList's original line
+
+
+class Themes(BaseModel):
+    anime_id: int
+    openings: list[ThemeSong]
+    endings: list[ThemeSong]

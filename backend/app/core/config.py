@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     # Paste the link from CDJapan's "Create Link to Arbitrary Page" menu here and put
     # {path} where the destination path goes. Empty means plain (non-affiliate) links.
     cdjapan_affiliate_template: str = ""
+    # Apple Services Performance Partners token (the at= value). Empty means plain Apple links.
+    apple_affiliate_token: str = ""
 
     link_signing_key: str = DEV_SIGNING_KEY
 

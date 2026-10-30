@@ -12,6 +12,21 @@ class Titles(BaseModel):
     ja: str | None = None
 
 
+class CastMember(BaseModel):
+    name: str
+    name_ja: str | None = None
+
+
+class CharacterQuery(BaseModel):
+    """A character to find merch for, plus the rest of the cast so listings can be sorted
+    into ones that show only this character and ones that show them with others."""
+
+    id: int
+    name: str
+    name_ja: str | None = None
+    cast: list[CastMember] = []
+
+
 class Money(BaseModel):
     amount: float
     currency: str
@@ -24,6 +39,9 @@ class Offer(BaseModel):
     price: Money | None = None
     shipping: Money | None = None  # None = unknown, calculated at checkout; 0 = free
     condition: str | None = None
+    # Character searches only: other cast members named in the listing title.
+    # Empty means the listing names just the character searched for.
+    others: list[str] = []
 
 
 class StoreResult(BaseModel):
@@ -37,7 +55,27 @@ class StoreResult(BaseModel):
     affiliate: bool = False
 
 
+class Outlet(BaseModel):
+    name: str
+    address: str
+    map_url: str
+
+
+class ShopResult(BaseModel):
+    """A shop to visit in person in the user's country."""
+
+    shop: str
+    name: str
+    note: str | None = None
+    website: str
+    search_url: str | None = None  # the shop's own online store, if it has one
+    search_term: str
+    outlets: list[Outlet]
+
+
 class MerchResponse(BaseModel):
     anime_id: int
+    character_id: int | None = None
     country: str
     stores: list[StoreResult]
+    shops: list[ShopResult] = []

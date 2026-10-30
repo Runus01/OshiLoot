@@ -10,8 +10,14 @@ scores you gave them.
 - Enter a MyAnimeList username, or sign in with MyAnimeList if your list is private, and
   see Completed and Watching anime grouped by your score, 10 first.
 - Open an anime to see live eBay listings plus search links for CDJapan, AmiAmi,
-  HobbyLink Japan, Mercari (via Buyee) and Carousell, filtered to stores that ship to your
-  country.
+  HobbyLink Japan, Mercari (via Buyee), Carousell and Hakken!, filtered to stores that ship to
+  your country, and shops to visit in person (Singapore so far: La Tendo, Otaku House and
+  Books Kinokuniya, with directions to each outlet).
+- Pick your oshi from the anime's characters to see merch of just them, and group goods
+  they're part of, sorted by which characters each listing names.
+- Rest the cursor on an opening or ending theme to hear Apple's 30-second preview (or press
+  its play button on a phone), and open it to find the single, the album or a download in
+  your country's Apple store, plus CD and vinyl shops.
 - Prices show in the original currency with an approximate local price; shipping is shown
   where the store's API provides it.
 - Every outbound link goes through a signed `/go/` redirect that records the click
@@ -19,10 +25,11 @@ scores you gave them.
 
 ## Architecture
 
-A modular monolith: one FastAPI app with four modules that never import each other, deployed
+A modular monolith: one FastAPI app with five modules that never import each other, deployed
 as one container on AWS Lambda behind CloudFront. Why this shape rather than microservices:
 [ADR 0001](docs/adr/0001-modular-monolith.md). How sign-in works without storing anyone's
-data on the server: [ADR 0002](docs/adr/0002-sign-in-session-in-cookie.md).
+data on the server: [ADR 0002](docs/adr/0002-sign-in-session-in-cookie.md). Where character
+and music data come from, and the terms that shaped it: [ADR 0003](docs/adr/0003-characters-and-theme-songs.md).
 
 ```mermaid
 flowchart LR
@@ -32,19 +39,23 @@ flowchart LR
   subgraph APP ["Lambda: one FastAPI container"]
     A[anime] --> C[core]
     M[merch] --> C
+    U[music] --> C
     R[regions] --> C
     G[go] --> C
   end
   A --> MAL[MyAnimeList API]
+  A --> AL[AniList API]
   M --> E[eBay Browse API]
+  U --> IT[iTunes Search API]
   R --> F["Frankfurter (ECB rates)"]
   C --> D[("DynamoDB: cache, clicks")]
 ```
 
 | Module | Routes | Owns |
 | --- | --- | --- |
-| `anime` | `/api/anime/*` | User lists (public, or private after MAL sign-in; never stored), search, details via an `AnimeSource` interface |
-| `merch` | `/api/merch` | Store catalogue (`stores.yaml`), store adapters, parallel search with per-store deadlines, link signing |
+| `anime` | `/api/anime/*` | User lists (public, or private after MAL sign-in; never stored), search, details and theme songs from MyAnimeList; characters from AniList |
+| `merch` | `/api/merch`, `/api/merch/character` | Store and shop catalogue (`stores.yaml`), store adapters, parallel search with per-store deadlines, sorting a character's listings into solo and group items, link signing |
+| `music` | `/api/music/song` | A theme song in the user's Apple store (preview, single, album), plus CD and vinyl shops (`music/stores.yaml`) |
 | `regions` | `/api/regions/*` | Supported countries and currencies, daily exchange rates |
 | `go` | `/go/{token}` | Verifies the signed link, records the click, redirects |
 | `core` | — | Settings, cache and event log (memory or DynamoDB), shared HTTP client, signing, request logging |
@@ -241,6 +252,7 @@ Do this once; afterwards every merge to `main` deploys itself.
    aws ssm put-parameter --name /oshiloot/ebay_client_id --type SecureString --value "..."
    aws ssm put-parameter --name /oshiloot/ebay_client_secret --type SecureString --value "..."
    aws ssm put-parameter --name /oshiloot/ebay_campaign_id --type SecureString --value "..."
+   aws ssm put-parameter --name /oshiloot/apple_affiliate_token --type SecureString --value "..."
    ```
 
 4. **Tell GitHub about AWS.** In the repo: Settings → Secrets and variables → Actions →
@@ -283,6 +295,7 @@ purpose; delete it in the DynamoDB console if you don't need it).
 | `EBAY_ENV` | `production` or `sandbox` |
 | `EBAY_CAMPAIGN_ID` | eBay Partner Network commission tracking |
 | `CDJAPAN_AFFILIATE_TEMPLATE` | CDJapan affiliate link pattern with `{path}` or `{url}` |
+| `APPLE_AFFILIATE_TOKEN` | Apple Services Performance Partners token (`at=`) for Apple Music and iTunes links |
 | `LINK_SIGNING_KEY` | Signs `/go/` links; required in AWS |
 | `STORAGE` | `memory` (default) or `dynamodb` |
 
@@ -295,6 +308,10 @@ In AWS, each of these is read from SSM as `/oshiloot/<lowercase name>`.
 2. If the store has a search API, add an adapter in `backend/app/merch/adapters/` that
    returns `Offer` objects, register it in `merch/router.py`, and add a test with `respx`.
 
+A shop to visit in person goes under `shops:` in the same file, keyed by country code, with
+its outlets' addresses (directions links are built from them). A CD or vinyl store goes in
+`backend/app/music/stores.yaml`.
+
 ## Data, terms and disclosure
 
 - **MyAnimeList:** the [API agreement](https://myanimelist.net/static/apiagreement.html)
@@ -305,15 +322,27 @@ In AWS, each of these is read from SSM as `/oshiloot/<lowercase name>`.
 - **Signing in** uses MAL's OAuth flow with PKCE. The MAL tokens never touch a database:
   they live in an encrypted, HttpOnly cookie in the user's browser (scoped to `/api/anime`,
   31 days), so the backend stays stateless. Signing out deletes the cookie.
+- **AniList** supplies characters and their pictures, looked up by MyAnimeList ID. Its
+  [terms](https://docs.anilist.co/guide/terms-of-use) allow commercial use free of charge
+  under US$150 revenue a month; above that, email AniList for a commercial licence. Bulk
+  collection isn't allowed, so pages are fetched on demand and cached for a day.
+- **Apple previews** follow the [Search API terms](https://performance-partners.apple.com/search-api):
+  a preview only appears on the page selling that song, beside Apple's "Get it on iTunes"
+  badge, credited "courtesy of iTunes", and is streamed from Apple, never stored. Apple
+  chooses the 30 seconds, which is often but not always the chorus.
 - **Affiliate links** are disclosed in the site footer. Keep that sentence if you change
   the layout.
-- **Search URL templates** in `stores.yaml` were written by hand; only the Carousell
-  Singapore pattern has been checked against a live example.
+- **Search URL templates** in `stores.yaml` were written by hand. Checked against a live
+  search: Carousell Singapore, CDJapan, Otaku House and Kinokuniya Singapore.
+- **Shop outlets** were checked in October 2026. Shops open and close (Hakken! has closed
+  its Singapore stores and now sells only online), so re-check addresses now and then.
 
 ## Roadmap
 
 - [ ] Rakuten Ichiba adapter (official API with affiliate links)
-- [ ] AniList as a second `AnimeSource`
+- [x] Characters from AniList, with merch per character
+- [x] Theme songs with previews and where to buy them
+- [ ] Shops to visit in person beyond Singapore
 - [x] Sign in with MyAnimeList (OAuth with PKCE) for private lists
 - [ ] Load test and p95 latency numbers in this README
 - [ ] Custom domain

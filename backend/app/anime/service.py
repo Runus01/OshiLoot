@@ -1,14 +1,20 @@
-from app.anime.models import Anime, ListEntry, ListStatus
-from app.anime.sources.base import AnimeSource
+from app.anime.models import Anime, Character, CharacterPage, ListEntry, ListStatus, Themes
+from app.anime.sources.base import AnimeSource, CharacterSource
 from app.core.storage import KeyValueStore
 
 DAY = 24 * 60 * 60
 
 
 class AnimeService:
-    def __init__(self, source: AnimeSource, cache: KeyValueStore) -> None:
+    def __init__(
+        self,
+        source: AnimeSource,
+        cache: KeyValueStore,
+        characters: CharacterSource | None = None,
+    ) -> None:
         self._source = source
         self._cache = cache
+        self._characters = characters
 
     async def user_list(self, username: str, status: ListStatus) -> list[ListEntry]:
         # Never cached: MAL's terms bar storing users' list data on the server.
@@ -30,3 +36,39 @@ class AnimeService:
         if anime is not None:
             await self._cache.put(key, anime.model_dump(), DAY)
         return anime
+
+    async def themes(self, anime_id: int) -> Themes | None:
+        key = f"anime:themes:{anime_id}"
+        if (cached := await self._cache.get(key)) is not None:
+            return Themes.model_validate(cached)
+        themes = await self._source.themes(anime_id)
+        if themes is not None:
+            await self._cache.put(key, themes.model_dump(), DAY)
+        return themes
+
+    # Characters come from AniList, which allows 30 requests a minute, so each page is
+    # cached for a day. That's a short-lived cache, not the bulk copy AniList's terms forbid.
+
+    async def characters(self, anime_id: int, page: int) -> CharacterPage:
+        key = f"anime:characters:{anime_id}:{page}"
+        if (cached := await self._cache.get(key)) is not None:
+            return CharacterPage.model_validate(cached)
+        if self._characters is None:
+            return CharacterPage(anime_id=anime_id, page=page, characters=[], has_next_page=False)
+        characters, has_next = await self._characters.characters(anime_id, page)
+        result = CharacterPage(
+            anime_id=anime_id, page=page, characters=characters, has_next_page=has_next
+        )
+        await self._cache.put(key, result.model_dump(), DAY)
+        return result
+
+    async def character(self, character_id: int) -> Character | None:
+        key = f"anime:character:{character_id}"
+        if (cached := await self._cache.get(key)) is not None:
+            return Character.model_validate(cached)
+        if self._characters is None:
+            return None
+        character = await self._characters.character(character_id)
+        if character is not None:
+            await self._cache.put(key, character.model_dump(), DAY)
+        return character
