@@ -1,5 +1,7 @@
 # OshiLoot
 
+<img src="frontend/src/assets/logo.svg" alt="The OshiLoot mascot: a smiling anime girl with star eyes, framed as a sticker" width="120" align="right">
+
 [![ci](https://github.com/Runus01/oshiloot/actions/workflows/ci.yml/badge.svg)](https://github.com/Runus01/oshiloot/actions/workflows/ci.yml)
 
 Find official and second-hand merch for the anime on your MyAnimeList, ordered by the
@@ -330,6 +332,11 @@ its outlets' addresses (directions links are built from them). A CD or vinyl sto
   a preview only appears on the page selling that song, beside Apple's "Get it on iTunes"
   badge, credited "courtesy of iTunes", and is streamed from Apple, never stored. Apple
   chooses the 30 seconds, which is often but not always the chorus.
+- **The mascot** (`frontend/src/assets/logo.svg` and `icon.svg`) is
+  [Anime girl portrait](https://commons.wikimedia.org/wiki/File:Anime_girl_portrait.jpg) by
+  Artbreeder, CC0 1.0, via Wikimedia Commons, cropped, framed as a sticker and given star
+  eyes for OshiLoot. CC0 needs no credit, but it's given here anyway. The PNG and ICO icons
+  are rendered from `icon.svg`.
 - **Affiliate links** are disclosed in the site footer. Keep that sentence if you change
   the layout.
 - **Search URL templates** in `stores.yaml` were written by hand. Checked against a live

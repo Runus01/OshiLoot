@@ -112,10 +112,30 @@ img {
 }
 
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 900;
   font-size: var(--step-1);
   text-decoration: none;
   letter-spacing: -0.01em;
+}
+
+/* The mascot is a die-cut sticker; pointing at it lifts one edge, as if peeling it. */
+.logo-mark {
+  width: 44px;
+  height: 44px;
+  transition: transform 0.2s ease;
+}
+
+.wordmark:hover .logo-mark {
+  transform: rotate(-8deg) scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-mark {
+    transition: none;
+  }
 }
 
 .country-button {
