@@ -68,7 +68,8 @@ jobs:
       - name: Synthesize stacks (no AWS access needed)
         run: |
           npx cdk synth --quiet -c githubRepo=ci/check
-          npx cdk synth --quiet -c githubAuth=keys
+          npx cdk synth --quiet -c githubAuth=keys -c domainNames=example.com,www.example.com \
+            -c certificateArn=arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000
         env:
           CDK_DEFAULT_ACCOUNT: "123456789012"
           CDK_DEFAULT_REGION: us-west-2
