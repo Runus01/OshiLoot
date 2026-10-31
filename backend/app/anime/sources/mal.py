@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from app.anime.models import Anime, AnimeTitles, ListEntry, ListStatus, Themes
+from app.anime.models import Anime, AnimeTitles, ListEntry, ListStatus, Season, Themes
 from app.anime.sources.base import (
     AccessTokenRejected,
     AnimeSourceError,
@@ -19,6 +19,8 @@ from app.anime.themes import parse_theme
 
 MAL_API = "https://api.myanimelist.net/v2"
 ANIME_FIELDS = "alternative_titles,main_picture,mean,media_type"
+# Music videos and promos can rank among a season's most-listed entries; they have no merch.
+NOT_SHOWS = {"music", "pv", "cm"}
 
 
 def _to_anime(node: dict[str, Any]) -> Anime:
@@ -108,6 +110,40 @@ class MalSource:
         if response.status_code != 200:
             raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
         return _to_anime(response.json())
+
+    async def seasonal(self, year: int, season: Season, limit: int) -> list[Anime]:
+        """Anime that premiered in this season, most-listed first. Shows that started in an
+        earlier season and are still running are left out, as are music videos and promos."""
+        response = await self._get(
+            f"{MAL_API}/anime/season/{year}/{season}",
+            {
+                "sort": "anime_num_list_users",
+                "limit": limit,
+                "fields": f"{ANIME_FIELDS},start_season",
+            },
+        )
+        if response.status_code != 200:
+            raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
+        premiered: list[Anime] = []
+        for item in response.json().get("data", []):
+            node = item["node"]
+            start = node.get("start_season") or {}
+            if start and (start.get("year"), start.get("season")) != (year, season):
+                continue
+            if node.get("media_type") in NOT_SHOWS:
+                continue
+            premiered.append(_to_anime(node))
+        return premiered
+
+    async def popular(self, limit: int) -> list[Anime]:
+        """The anime on the most MyAnimeList lists, all time."""
+        response = await self._get(
+            f"{MAL_API}/anime/ranking",
+            {"ranking_type": "bypopularity", "limit": limit, "fields": ANIME_FIELDS},
+        )
+        if response.status_code != 200:
+            raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
+        return [_to_anime(item["node"]) for item in response.json().get("data", [])]
 
     async def themes(self, anime_id: int) -> Themes | None:
         # Not in MAL's API docs, but the anime endpoint returns both fields when asked.

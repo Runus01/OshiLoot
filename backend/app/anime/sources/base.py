@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from app.anime.models import Anime, Character, ListEntry, ListStatus, Themes
+from app.anime.models import Anime, Character, ListEntry, ListStatus, Season, Themes
 
 
 class AnimeSourceError(Exception):
@@ -34,6 +34,8 @@ class AnimeSource(Protocol):
     async def search(self, query: str, limit: int) -> list[Anime]: ...
     async def get(self, anime_id: int) -> Anime | None: ...
     async def themes(self, anime_id: int) -> Themes | None: ...
+    async def seasonal(self, year: int, season: Season, limit: int) -> list[Anime]: ...
+    async def popular(self, limit: int) -> list[Anime]: ...
 
 
 class CharacterSource(Protocol):

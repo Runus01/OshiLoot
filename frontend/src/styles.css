@@ -394,6 +394,77 @@ input:not([type="radio"], [type="checkbox"]):hover {
   flex: 1;
 }
 
+/* Browse rows: this season's anime and the all-time favourites, on the same shelves as a list. */
+
+.browse {
+  padding-top: 56px;
+  display: grid;
+  gap: 12px;
+}
+
+.browse h2 {
+  font-size: var(--step-2);
+  font-weight: 700;
+}
+
+.browse-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.browse-arrows {
+  display: flex;
+  gap: 8px;
+}
+
+.arrow-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.arrow-button:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.arrow-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Touch screens swipe the row instead. */
+@media (hover: none) {
+  .browse-arrows {
+    display: none;
+  }
+}
+
+.cover-loading {
+  display: block;
+  animation: cover-loading 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes cover-loading {
+  to {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-loading {
+    animation: none;
+  }
+}
+
 /* Cards grow with the screen: two columns on a phone, up to six on a wide laptop. */
 .result-grid {
   display: grid;

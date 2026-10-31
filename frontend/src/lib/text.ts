@@ -1,4 +1,4 @@
-import type { CharacterRole, Offer, StoreResult, ThemeSong } from "../types";
+import type { CharacterRole, Offer, Season, StoreResult, ThemeSong } from "../types";
 
 /** Hiragana, katakana or kanji: mark such text lang="ja" so it renders in a Japanese font. */
 export const looksJapanese = (text: string) => /[぀-ヿ㐀-鿿]/.test(text);
@@ -9,6 +9,11 @@ export const langOf = (text: string) => (looksJapanese(text) ? "ja" : undefined)
 export function themeLabel(theme: ThemeSong): string {
   const kind = theme.kind === "opening" ? "Opening" : "Ending";
   return theme.number ? `${kind} ${theme.number}` : kind;
+}
+
+/** "Fall 2026": the season names MyAnimeList uses. */
+export function seasonLabel(season: Season, year: number): string {
+  return `${season[0].toUpperCase()}${season.slice(1)} ${year}`;
 }
 
 export function roleLabel(role: CharacterRole | null): string | null {

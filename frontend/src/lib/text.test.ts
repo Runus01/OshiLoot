@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Offer, StoreResult, ThemeSong } from "../types";
-import { listNames, looksJapanese, roleLabel, splitByCompany, themeLabel } from "./text";
+import { listNames, looksJapanese, roleLabel, seasonLabel, splitByCompany, themeLabel } from "./text";
 
 const theme = (kind: ThemeSong["kind"], number: string | null): ThemeSong => ({
   id: 1,
@@ -62,5 +62,12 @@ describe("text helpers", () => {
     expect(looksJapanese("Frieren")).toBe(false);
     expect(roleLabel("supporting")).toBe("Supporting");
     expect(roleLabel(null)).toBeNull();
+  });
+});
+
+describe("seasonLabel", () => {
+  it("capitalises the season and adds the year", () => {
+    expect(seasonLabel("fall", 2026)).toBe("Fall 2026");
+    expect(seasonLabel("winter", 2027)).toBe("Winter 2027");
   });
 });

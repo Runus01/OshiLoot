@@ -3,7 +3,15 @@ from typing import Annotated
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 
-from app.anime.models import Anime, Character, CharacterPage, ListEntry, ListStatus, Themes
+from app.anime.models import (
+    Anime,
+    Character,
+    CharacterPage,
+    ListEntry,
+    ListStatus,
+    SeasonalAnime,
+    Themes,
+)
 from app.anime.service import AnimeService
 from app.anime.sources.anilist import AniListSource
 from app.anime.sources.base import (
@@ -87,6 +95,33 @@ async def search(
         return await service.search(q)
     except AnimeSourceError as exc:
         raise upstream_error(exc) from exc
+
+
+# The home page rows. Browsers may keep them for an hour; the server refreshes them from
+# MyAnimeList every few hours. Both routes must come before /{anime_id}.
+HOME_ROW_CACHE = "public, max-age=3600"
+
+
+@router.get("/seasonal", response_model=SeasonalAnime)
+async def seasonal(service: Service, response: Response) -> SeasonalAnime:
+    """This season's new anime (by Japan's calendar), the most-listed first."""
+    try:
+        result = await service.seasonal()
+    except AnimeSourceError as exc:
+        raise upstream_error(exc) from exc
+    response.headers["Cache-Control"] = HOME_ROW_CACHE
+    return result
+
+
+@router.get("/popular", response_model=list[Anime])
+async def popular(service: Service, response: Response) -> list[Anime]:
+    """The anime on the most MyAnimeList lists, all time."""
+    try:
+        result = await service.popular()
+    except AnimeSourceError as exc:
+        raise upstream_error(exc) from exc
+    response.headers["Cache-Control"] = HOME_ROW_CACHE
+    return result
 
 
 @router.get("/{anime_id}", response_model=Anime)

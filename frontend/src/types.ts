@@ -17,6 +17,15 @@ export interface Anime {
   media_type: string | null;
 }
 
+export type Season = "winter" | "spring" | "summer" | "fall";
+
+/** Anime that premiered this season (Japan's calendar), the most-listed first. */
+export interface SeasonalAnime {
+  year: number;
+  season: Season;
+  anime: Anime[];
+}
+
 export interface ListEntry {
   anime: Anime;
   status: string;

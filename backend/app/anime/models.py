@@ -20,6 +20,17 @@ class Anime(BaseModel):
     media_type: str | None = None
 
 
+Season = Literal["winter", "spring", "summer", "fall"]
+
+
+class SeasonalAnime(BaseModel):
+    """Anime that premiered this season, the most-listed on MyAnimeList first."""
+
+    year: int
+    season: Season
+    anime: list[Anime]
+
+
 class ListEntry(BaseModel):
     anime: Anime
     status: str

@@ -8,6 +8,7 @@ import type {
   ListStatus,
   MerchResponse,
   MyLists,
+  SeasonalAnime,
   SignInStatus,
   SongResponse,
   ThemeSong,
@@ -85,6 +86,10 @@ export const api = {
     getJson<Anime[]>(`/api/anime/search?q=${encodeURIComponent(query)}`, signal),
 
   anime: (id: number, signal?: AbortSignal) => getJson<Anime>(`/api/anime/${id}`, signal),
+
+  // The home page rows.
+  seasonal: (signal?: AbortSignal) => getJson<SeasonalAnime>("/api/anime/seasonal", signal),
+  popular: (signal?: AbortSignal) => getJson<Anime[]>("/api/anime/popular", signal),
 
   merch: (anime: Anime, country: string, signal?: AbortSignal) =>
     getJson<MerchResponse>(`/api/merch?${titleParams(anime, country)}`, signal),

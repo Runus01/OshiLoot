@@ -1,8 +1,21 @@
-from app.anime.models import Anime, Character, CharacterPage, ListEntry, ListStatus, Themes
+from datetime import datetime
+
+from app.anime.models import (
+    Anime,
+    Character,
+    CharacterPage,
+    ListEntry,
+    ListStatus,
+    SeasonalAnime,
+    Themes,
+)
+from app.anime.seasons import current_season
 from app.anime.sources.base import AnimeSource, CharacterSource
 from app.core.storage import KeyValueStore
 
-DAY = 24 * 60 * 60
+HOUR = 60 * 60
+DAY = 24 * HOUR
+ROW_SIZE = 24  # covers in each row on the home page
 
 
 class AnimeService:
@@ -35,6 +48,28 @@ class AnimeService:
         anime = await self._source.get(anime_id)
         if anime is not None:
             await self._cache.put(key, anime.model_dump(), DAY)
+        return anime
+
+    async def seasonal(self, now: datetime | None = None) -> SeasonalAnime:
+        """This season's new anime for the home page. Rankings shift through the season,
+        so they're refreshed every six hours."""
+        year, season = current_season(now)
+        key = f"anime:season:{year}:{season}:{ROW_SIZE}"
+        if (cached := await self._cache.get(key)) is not None:
+            return SeasonalAnime.model_validate(cached)
+        # Asks for more than a row, because carried-over shows and promos are left out.
+        premiered = await self._source.seasonal(year, season, 100)
+        result = SeasonalAnime(year=year, season=season, anime=premiered[:ROW_SIZE])
+        await self._cache.put(key, result.model_dump(), 6 * HOUR)
+        return result
+
+    async def popular(self) -> list[Anime]:
+        """The all-time most popular anime for the home page."""
+        key = f"anime:popular:{ROW_SIZE}"
+        if (cached := await self._cache.get(key)) is not None:
+            return [Anime.model_validate(a) for a in cached]
+        anime = await self._source.popular(ROW_SIZE)
+        await self._cache.put(key, [a.model_dump() for a in anime], DAY)
         return anime
 
     async def themes(self, anime_id: int) -> Themes | None:
