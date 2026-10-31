@@ -1,4 +1,5 @@
 import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
@@ -10,22 +11,74 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
 import { BACKEND_REPOSITORY, GITHUB_DEPLOY_ROLE, SSM_PREFIX } from "./names.ts";
 
-// Sends every path without a file extension (/anime/52991) to index.html, so the React
-// router can handle it. Runs only on the S3 behaviour, never on /api or /go.
-const SPA_REWRITE = `
+/**
+ * Viewer-request function for the pages (the S3 behaviour, never /api or /go). Sends the
+ * extra domains, such as www.oshiloot.com, to the main one, and every path without a file
+ * extension (/anime/52991) to index.html, so the React router can handle it.
+ */
+function viewerRequestCode(siteDomain: string, redirectDomains: string[]): string {
+  return `
+var SITE = ${JSON.stringify(siteDomain)};
+var REDIRECT_HOSTS = ${JSON.stringify(redirectDomains)};
+
 function handler(event) {
   var request = event.request;
+  var host = request.headers.host ? request.headers.host.value : "";
+  if (REDIRECT_HOSTS.indexOf(host) !== -1) {
+    return {
+      statusCode: 301,
+      statusDescription: "Moved Permanently",
+      headers: { location: { value: "https://" + SITE + request.uri + queryString(request.querystring) } },
+    };
+  }
   if (request.uri.indexOf(".") === -1) {
     request.uri = "/index.html";
   }
   return request;
+}
+
+// Rebuilt the way AWS's own query-string example does, keeping repeated keys.
+function queryString(querystring) {
+  var parts = [];
+  for (var key in querystring) {
+    var field = querystring[key];
+    var values = field.multiValue ? field.multiValue : [field];
+    for (var i = 0; i < values.length; i++) {
+      parts.push(key + "=" + values[i].value);
+    }
+  }
+  return parts.length > 0 ? "?" + parts.join("&") : "";
 }`;
+}
+
+/** "a.com, www.a.com" (or an empty -c value from the deploy workflow) -> ["a.com", "www.a.com"] */
+function contextList(scope: Construct, key: string): string[] {
+  return String(scope.node.tryGetContext(key) ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 export class AppStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     const imageTag: string = this.node.tryGetContext("imageTag") ?? "latest";
+
+    // Optional: your own domain (README, "Use your own domain"). The first name is the
+    // site's address and the others redirect to it. CloudFront only takes certificates
+    // from us-east-1, whatever region the rest of the stack is in.
+    const [siteDomain, ...redirectDomains] = contextList(this, "domainNames");
+    const certificateArn = String(this.node.tryGetContext("certificateArn") ?? "").trim();
+    if (Boolean(siteDomain) !== Boolean(certificateArn)) {
+      throw new Error("Set domainNames and certificateArn together, or neither.");
+    }
+    if (certificateArn && !/^arn:aws[\w-]*:acm:us-east-1:\d{12}:certificate\/[\w-]+$/.test(certificateArn)) {
+      throw new Error(`certificateArn must be an ACM certificate in us-east-1, not "${certificateArn}".`);
+    }
+    const certificate = certificateArn
+      ? acm.Certificate.fromCertificateArn(this, "SiteCertificate", certificateArn)
+      : undefined;
 
     // Provisioned capacity stays inside DynamoDB's always-free 25 read + 25 write units.
     // On-demand mode is not covered by the free tier.
@@ -101,6 +154,8 @@ export class AppStack extends Stack {
     const distribution = new cloudfront.Distribution(this, "Site", {
       comment: "OshiLoot",
       defaultRootObject: "index.html",
+      domainNames: siteDomain ? [siteDomain, ...redirectDomains] : undefined,
+      certificate,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -109,7 +164,7 @@ export class AppStack extends Stack {
           {
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
             function: new cloudfront.Function(this, "SpaRewrite", {
-              code: cloudfront.FunctionCode.fromInline(SPA_REWRITE),
+              code: cloudfront.FunctionCode.fromInline(viewerRequestCode(siteDomain ?? "", redirectDomains)),
               runtime: cloudfront.FunctionRuntime.JS_2_0,
             }),
           },
@@ -129,6 +184,10 @@ export class AppStack extends Stack {
 
     new CfnOutput(this, "SiteBucketName", { value: siteBucket.bucketName });
     new CfnOutput(this, "DistributionId", { value: distribution.distributionId });
-    new CfnOutput(this, "SiteUrl", { value: `https://${distribution.distributionDomainName}` });
+    new CfnOutput(this, "SiteUrl", {
+      value: `https://${siteDomain ?? distribution.distributionDomainName}`,
+    });
+    // CloudFront's own address: what your domain's DNS records point at.
+    new CfnOutput(this, "DistributionDomainName", { value: distribution.distributionDomainName });
   }
 }

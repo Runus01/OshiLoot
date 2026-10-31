@@ -27,7 +27,7 @@ jobs:
       # Signs in with GitHub's OIDC token, unless the AWS_ACCESS_KEY_ID and
       # AWS_SECRET_ACCESS_KEY secrets are set (accounts that can't use OIDC, see README).
       # Either way, the run ends up with an hour-long session as the deploy role.
-      - uses: aws-actions/configure-aws-credentials@v5
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -58,10 +58,16 @@ jobs:
 
       - name: Deploy OshiLootApp
         working-directory: infra
+        env:
+          # Optional, for your own domain (README): e.g. "oshiloot.com,www.oshiloot.com"
+          # and the ARN of a us-east-1 certificate that covers them. Empty: CloudFront's address.
+          SITE_DOMAINS: ${{ vars.SITE_DOMAINS }}
+          SITE_CERTIFICATE_ARN: ${{ vars.SITE_CERTIFICATE_ARN }}
         run: |
           npm ci
           npx cdk deploy OshiLootApp --require-approval never \
             -c imageTag=${{ github.sha }} -c githubRepo=${{ github.repository }} \
+            -c "domainNames=$SITE_DOMAINS" -c "certificateArn=$SITE_CERTIFICATE_ARN" \
             --outputs-file outputs.json
 
       - name: Upload the frontend
@@ -81,6 +87,8 @@ jobs:
 
       - name: Smoke test
         run: |
+          # Checked at CloudFront's own address, which answers whatever your DNS says.
+          CDN=$(jq -r '.OshiLootApp.DistributionDomainName' infra/outputs.json)
           URL=$(jq -r '.OshiLootApp.SiteUrl' infra/outputs.json)
-          curl -fsS --retry 6 --retry-delay 10 --retry-all-errors "$URL/api/healthz"
+          curl -fsS --retry 6 --retry-delay 10 --retry-all-errors "https://$CDN/api/healthz"
           echo "Deployed to $URL" >> "$GITHUB_STEP_SUMMARY"
