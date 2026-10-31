@@ -27,7 +27,7 @@ jobs:
       # Signs in with GitHub's OIDC token, unless the AWS_ACCESS_KEY_ID and
       # AWS_SECRET_ACCESS_KEY secrets are set (accounts that can't use OIDC, see README).
       # Either way, the run ends up with an hour-long session as the deploy role.
-      - uses: aws-actions/configure-aws-credentials@v5
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
