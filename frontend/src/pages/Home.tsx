@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router";
 import { api, ApiError, SIGN_IN_URL, SIGN_OUT_URL } from "../api";
+import { AnimeRow } from "../components/AnimeRow";
 import { Cover } from "../components/Cover";
 import { groupByScore } from "../lib/scores";
 import { cachedList, cacheList, forgetLists, saveUsername, savedUsername } from "../lib/storage";
-import type { Anime, ListEntry, ListStatus, SignInStatus } from "../types";
+import { seasonLabel } from "../lib/text";
+import type { Anime, ListEntry, ListStatus, SeasonalAnime, SignInStatus } from "../types";
 
 type Lists = Record<ListStatus, ListEntry[]>;
 
@@ -217,6 +219,7 @@ export function Home() {
         </section>
       )}
 
+      <Browse />
       <Search />
     </>
   );
@@ -311,5 +314,46 @@ function Search() {
         </ul>
       )}
     </section>
+  );
+}
+
+type Row = "season" | "popular";
+
+/** This season's new anime and the all-time favourites, for browsing without a search. */
+function Browse() {
+  const [season, setSeason] = useState<SeasonalAnime | null>(null);
+  const [popular, setPopular] = useState<Anime[] | null>(null);
+  const [failed, setFailed] = useState<Record<Row, boolean>>({ season: false, popular: false });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    // These rows are extras: if one doesn't load, it's left out rather than shown as an error.
+    const leaveOut = (row: Row) => (err: Error) => {
+      if (err.name !== "AbortError") setFailed((current) => ({ ...current, [row]: true }));
+    };
+    api.seasonal(controller.signal).then(setSeason).catch(leaveOut("season"));
+    api.popular(controller.signal).then(setPopular).catch(leaveOut("popular"));
+    return () => controller.abort();
+  }, []);
+
+  return (
+    <>
+      {!failed.season && season?.anime.length !== 0 && (
+        <AnimeRow
+          id="browse-season"
+          title="New this season"
+          note={season ? `${seasonLabel(season.season, season.year)}, most followed first` : "Loading…"}
+          anime={season?.anime ?? null}
+        />
+      )}
+      {!failed.popular && popular?.length !== 0 && (
+        <AnimeRow
+          id="browse-popular"
+          title="Most popular"
+          note="All time, on MyAnimeList"
+          anime={popular}
+        />
+      )}
+    </>
   );
 }
