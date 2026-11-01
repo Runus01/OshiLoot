@@ -1,10 +1,10 @@
 from typing import Protocol
 
-from app.merch.models import Offer
+from app.merch.models import Listings
 
 
 class StoreAdapter(Protocol):
-    """A store with a search API. Link-out stores need no adapter."""
+    """A store whose listings OshiLoot can read. Link-out stores need no adapter."""
 
     @property
     def configured(self) -> bool: ...
@@ -12,4 +12,4 @@ class StoreAdapter(Protocol):
     @property
     def affiliate(self) -> bool: ...
 
-    async def search(self, term: str, country: str) -> list[Offer]: ...
+    async def search(self, term: str, country: str) -> Listings: ...

@@ -40,6 +40,10 @@ class Settings(BaseSettings):
 
     link_signing_key: str = DEV_SIGNING_KEY
 
+    # Live listings from shops' own storefront search (Shopify shops in stores.yaml).
+    # Set SHOP_LISTINGS=false, or /oshiloot/shop_listings in AWS, to show search links only.
+    shop_listings: bool = True
+
     storage: Literal["memory", "dynamodb"] = "memory"
     dynamodb_endpoint: str | None = None
     cache_table: str = "oshiloot-cache"

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { api, ApiError } from "../api";
-import { OfferGrid, ShopsSection, StoreLinks } from "../components/Offers";
+import { NoListingsNote, OfferGrid, ShopsSection, StoreLinks } from "../components/Offers";
 import { useRegion } from "../context";
 import { displayTitle } from "../lib/scores";
 import { roleLabel, splitByCompany } from "../lib/text";
@@ -135,15 +135,14 @@ function CharacterPage() {
               <OfferGrid items={group} country={country} fx={fx} />
             </section>
           )}
-          <section className="store-section" aria-labelledby="section-search">
-            <h2 id="section-search">Search stores for {character.name}</h2>
-            <p className="muted">
-              {solo.length + group.length === 0
-                ? `No live listings to sort right now. Each store below opens its own search${term ? ` for “${term}”` : ""}.`
-                : "Each store opens its own search, with more than the live listings above."}
-            </p>
-            <StoreLinks stores={stores} />
-          </section>
+          <NoListingsNote stores={stores} term={term ?? character.name} country={country} />
+          {stores.some((s) => s.search_url) && (
+            <section className="store-section" aria-labelledby="section-search">
+              <h2 id="section-search">Search stores for {character.name}</h2>
+              <p className="muted">Each store opens its own search, with more than the listings shown here.</p>
+              <StoreLinks stores={stores} />
+            </section>
+          )}
           <ShopsSection shops={merch.shops} country={country} />
         </>
       )}

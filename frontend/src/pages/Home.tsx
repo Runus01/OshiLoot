@@ -4,7 +4,7 @@ import { api, ApiError, SIGN_IN_URL, SIGN_OUT_URL } from "../api";
 import { AnimeRow } from "../components/AnimeRow";
 import { Cover } from "../components/Cover";
 import { groupByScore } from "../lib/scores";
-import { cachedList, cacheList, forgetLists, saveUsername, savedUsername } from "../lib/storage";
+import { cachedList, cacheList, forgetLists, forgetUsername, saveUsername, savedUsername } from "../lib/storage";
 import { seasonLabel } from "../lib/text";
 import type { Anime, ListEntry, ListStatus, SeasonalAnime, SignInStatus } from "../types";
 
@@ -25,35 +25,43 @@ const SIGN_IN_NOTICES: Record<string, string> = {
 // Signed-in lists are cached under a key no MAL username can have ("@" isn't allowed).
 const myCacheKey = (username: string) => `@me-${username}`;
 
+/**
+ * Top to bottom: search, a short intro with the two ways to load a list, the loaded list,
+ * then rows of anime to browse. The intro stays compact so the first row shows without
+ * scrolling, on a laptop and on a phone.
+ */
 export function Home() {
   const [params, setParams] = useSearchParams();
   const [account, setAccount] = useState<SignInStatus | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [username, setUsername] = useState(savedUsername() ?? "");
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [cacheKey, setCacheKey] = useState<string | null>(null);
   const [lists, setLists] = useState<Lists | null>(null);
   const [tab, setTab] = useState<ListStatus>("completed");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async (cacheKey: string, label: string, fetchLists: () => Promise<Lists>) => {
+  const load = async (key: string, label: string, fetchLists: () => Promise<Lists>) => {
     setError(null);
     const cached = {
-      completed: cachedList<ListEntry[]>(cacheKey, "completed"),
-      watching: cachedList<ListEntry[]>(cacheKey, "watching"),
+      completed: cachedList<ListEntry[]>(key, "completed"),
+      watching: cachedList<ListEntry[]>(key, "watching"),
     };
     if (cached.completed && cached.watching) {
       setLists(cached as Lists);
       setLoadedFor(label);
+      setCacheKey(key);
       return;
     }
     setLoading(true);
     try {
       const fresh = await fetchLists();
-      cacheList(cacheKey, "completed", fresh.completed);
-      cacheList(cacheKey, "watching", fresh.watching);
+      cacheList(key, "completed", fresh.completed);
+      cacheList(key, "watching", fresh.watching);
       setLists(fresh);
       setLoadedFor(label);
+      setCacheKey(key);
     } catch (err) {
       setLists(null);
       setError(err instanceof ApiError ? err.message : "Something went wrong loading your list.");
@@ -87,6 +95,20 @@ export function Home() {
     });
   };
 
+  /** Puts the page back as it was before a list was loaded, ready for another username. */
+  const clearList = () => {
+    if (cacheKey) forgetLists(cacheKey);
+    if (!account?.signed_in) {
+      forgetUsername();
+      setUsername("");
+    }
+    setLists(null);
+    setLoadedFor(null);
+    setCacheKey(null);
+    setError(null);
+    setTab("completed");
+  };
+
   useEffect(() => {
     const result = params.get("signin");
     if (result) {
@@ -115,92 +137,100 @@ export function Home() {
     loadPublicList(username);
   };
 
-  const errorMessage = error && (
-    <p className="error" role="alert">
-      {error}
-    </p>
-  );
+  const signedIn = account?.signed_in && account.username ? account : null;
 
   return (
     <>
-      <section className="intro">
-        <h1 className="headline">Merch for the anime you rated highest.</h1>
-        <p className="lede">
-          Enter your MyAnimeList username, or sign in if your list is private, to line up your
-          anime by your own scores. Open any of them to see official and second-hand merch that
-          ships to you.
-        </p>
+      <Search />
+
+      <section className="hero" aria-labelledby="hero-title">
+        <h1 className="headline" id="hero-title">
+          Find treasures for your oshi!
+        </h1>
+        <p className="lede">Anime merch that ships to you, lined up by your MyAnimeList scores.</p>
         {notice && (
           <p className="hint" role="status">
             {notice}
           </p>
         )}
 
-        {account?.signed_in && account.username ? (
-          <div className="username-form">
-            <p>
-              Signed in to MyAnimeList as <strong>{account.username}</strong>.{" "}
+        {signedIn ? (
+          <div className="list-actions">
+            <p className="signed-in">
+              Signed in to MyAnimeList as <strong>{signedIn.username}</strong>.{" "}
               {/* A normal navigation: the backend clears the cookie and redirects home. */}
-              <a href={SIGN_OUT_URL} onClick={() => forgetLists(myCacheKey(account.username!))}>
-                Sign{"\u00a0"}out
+              <a href={SIGN_OUT_URL} onClick={() => forgetLists(myCacheKey(signedIn.username!))}>
+                Sign{" "}out
               </a>
             </p>
             {!lists && (
-              <div className="field-row">
-                <button
-                  className="button"
-                  type="button"
-                  onClick={() => loadMyList(account)}
-                  disabled={loading}
-                >
-                  {loading ? "Loading list…" : "Load my list"}
-                </button>
-              </div>
+              <button className="button" type="button" onClick={() => loadMyList(signedIn)} disabled={loading}>
+                {loading ? "Loading list…" : "Load my list"}
+              </button>
             )}
-            <p className="hint">
-              Private lists work too. Your sign-in stays in this browser, not on our server.
-            </p>
-            {errorMessage}
           </div>
         ) : (
-          <>
+          <div className="list-actions">
             <form className="username-form" onSubmit={submit}>
-              <label htmlFor="username">MyAnimeList username</label>
-              <div className="field-row">
-                <input
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  spellCheck={false}
-                  placeholder="your_username"
-                  pattern="[A-Za-z0-9_\-]{2,16}"
-                  title="2–16 letters, numbers, underscores or hyphens"
-                  required
-                />
-                <button className="button" type="submit" disabled={loading}>
-                  {loading ? "Loading list…" : "Load my list"}
-                </button>
-              </div>
-              <p className="hint">This needs a public list. Nothing is saved on our server.</p>
-              {errorMessage}
+              <label htmlFor="username" className="visually-hidden">
+                MyAnimeList username
+              </label>
+              <input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                spellCheck={false}
+                placeholder="MyAnimeList username"
+                pattern="[A-Za-z0-9_\-]{2,16}"
+                title="2–16 letters, numbers, underscores or hyphens"
+                required
+              />
+              <button className="button" type="submit" disabled={loading}>
+                {loading ? "Loading…" : "Load my list"}
+              </button>
             </form>
             {account?.available && (
-              <form className="username-form" action={SIGN_IN_URL} method="get">
-                <p className="hint">List set to private?</p>
-                <div>
-                  <button className="button-quiet" type="submit">
+              <>
+                <span className="list-or" aria-hidden="true">
+                  or
+                </span>
+                <form action={SIGN_IN_URL} method="get">
+                  <button className="button-mal" type="submit">
                     Sign in with MyAnimeList
                   </button>
-                </div>
-              </form>
+                </form>
+              </>
             )}
-          </>
+          </div>
+        )}
+        <p className="hint">
+          {signedIn ? (
+            "Your sign-in stays in this browser, not on our server."
+          ) : (
+            <>
+              <span className="hint-long">Private list? Sign in with MyAnimeList instead. </span>
+              Nothing is saved on our server.
+            </>
+          )}
+        </p>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
         )}
       </section>
 
       {lists && loadedFor && (
         <section className="list" aria-label={`${loadedFor}'s anime list`}>
+          <div className="list-head">
+            <p className="list-owner">
+              <strong>{loadedFor}</strong>'s list
+            </p>
+            <button type="button" className="button-small" onClick={clearList}>
+              Clear list
+            </button>
+          </div>
           <div className="tabs" role="tablist">
             {TABS.map(({ status, label }) => (
               <button
@@ -220,7 +250,6 @@ export function Home() {
       )}
 
       <Browse />
-      <Search />
     </>
   );
 }
@@ -229,7 +258,7 @@ function Shelves({ entries, status }: { entries: ListEntry[]; status: ListStatus
   if (entries.length === 0) {
     return (
       <p className="empty-note">
-        Nothing marked as {status} on this list yet. Try the other tab, or search below.
+        Nothing marked as {status} on this list yet. Try the other tab, or search at the top.
       </p>
     );
   }
@@ -258,18 +287,22 @@ function Shelves({ entries, status }: { entries: ListEntry[]; status: ListStatus
   );
 }
 
+/** Search any anime: a slim bar at the top of the page, with results right under it. */
 function Search() {
   const [query, setQuery] = useState("");
+  const [searched, setSearched] = useState("");
   const [results, setResults] = useState<Anime[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    const term = query.trim();
     setError(null);
     setLoading(true);
     try {
-      setResults(await api.search(query.trim()));
+      setResults(await api.search(term));
+      setSearched(term);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Search failed. Try again.");
     } finally {
@@ -277,22 +310,29 @@ function Search() {
     }
   };
 
+  const clear = () => {
+    setQuery("");
+    setSearched("");
+    setResults(null);
+    setError(null);
+  };
+
   return (
-    <section className="search" aria-labelledby="search-title">
-      <h2 id="search-title">Or search any anime</h2>
-      <form className="field-row" onSubmit={submit} role="search">
+    <section className="search" aria-label="Search any anime">
+      <form className="search-bar" onSubmit={submit} role="search">
         <label htmlFor="search-input" className="visually-hidden">
-          Anime title
+          Search any anime
         </label>
         <input
           id="search-input"
+          type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Frieren, Bocchi the Rock!, 葬送のフリーレン"
+          placeholder="Search any anime"
           minLength={3}
           required
         />
-        <button className="button-quiet" type="submit" disabled={loading}>
+        <button className="button" type="submit" disabled={loading}>
           {loading ? "Searching…" : "Search"}
         </button>
       </form>
@@ -301,17 +341,28 @@ function Search() {
           {error}
         </p>
       )}
-      {results && results.length === 0 && (
-        <p className="empty-note">No anime matched “{query}”. Try the Japanese or romaji title.</p>
-      )}
-      {results && results.length > 0 && (
-        <ul className="result-grid">
-          {results.map((anime) => (
-            <li key={anime.id}>
-              <Cover anime={anime} />
-            </li>
-          ))}
-        </ul>
+      {results && (
+        <div className="search-results">
+          <div className="list-head">
+            <p className="list-owner">
+              {results.length === 0 ? "No anime matched " : "Results for "}
+              <strong>“{searched}”</strong>
+              {results.length === 0 && ". Try the Japanese or romaji title."}
+            </p>
+            <button type="button" className="button-small" onClick={clear}>
+              Clear search
+            </button>
+          </div>
+          {results.length > 0 && (
+            <ul className="result-grid">
+              {results.map((anime) => (
+                <li key={anime.id}>
+                  <Cover anime={anime} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </section>
   );

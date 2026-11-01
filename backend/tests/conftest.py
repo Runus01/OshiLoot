@@ -21,6 +21,7 @@ def settings() -> Settings:
         storage="memory",
         ebay_client_id="",
         ebay_client_secret="",
+        shop_listings=False,  # no calls to real shops; test_shopify.py turns it on
     )
 
 

@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.core.signing import verify
 from app.merch.adapters.ebay import API_BASE
 from app.merch.catalog import load_catalog
-from app.merch.models import Offer, Titles
+from app.merch.models import Listings, Offer, Titles
 from app.merch.router import get_adapters
 
 FRIEREN = "anime_id=52991&title=Sousou+no+Frieren&title_en=Frieren&title_ja=葬送のフリーレン"
@@ -20,8 +20,11 @@ def target(url: str, key: str = "test-signing-key") -> str:
 
 
 class FakeAdapter:
-    def __init__(self, offers=None, delay: float = 0, fail: bool = False) -> None:
+    def __init__(
+        self, offers=None, delay: float = 0, fail: bool = False, total: int | None = None
+    ) -> None:
         self.offers = offers or []
+        self.total = total
         self.delay = delay
         self.fail = fail
         self.calls = 0
@@ -29,12 +32,13 @@ class FakeAdapter:
     configured = True
     affiliate = False
 
-    async def search(self, term: str, country: str) -> list[Offer]:
+    async def search(self, term: str, country: str) -> Listings:
         self.calls += 1
         await asyncio.sleep(self.delay)
         if self.fail:
             raise RuntimeError("store is down")
-        return self.offers
+        total = len(self.offers) if self.total is None else self.total
+        return Listings(offers=self.offers, total=total)
 
 
 def use_adapter(app: FastAPI, adapter: FakeAdapter) -> None:
@@ -76,6 +80,8 @@ def test_linkouts_and_unconfigured_ebay(client: TestClient) -> None:
     assert {"cdjapan", "carousell", "buyee_mercari", "ebay"} <= stores.keys()
     assert "mercari_jp" not in stores
     assert stores["ebay"]["status"] == "not_configured"
+    assert stores["ebay"]["live"] is False and stores["ebay"]["total"] is None
+    assert stores["cdjapan"]["live"] is False
     # Even without API keys, every store keeps a working search link, signed for /go/
     assert target(stores["ebay"]["search_url"]).startswith("https://www.ebay.com/sch/")
     assert target(stores["carousell"]["search_url"]) == ("https://www.carousell.sg/search/Frieren/")
@@ -87,6 +93,26 @@ def test_offers_are_signed(app: FastAPI, client: TestClient) -> None:
     stores = stores_by_id(client.get(f"/api/merch?{FRIEREN}&country=US"))
     assert stores["ebay"]["status"] == "ok"
     assert target(stores["ebay"]["offers"][0]["url"]) == "https://www.ebay.com/itm/1"
+
+
+def test_live_stores_report_how_many_listings_matched(app: FastAPI, client: TestClient) -> None:
+    offer = Offer(title="Frieren figure", url="https://www.ebay.com/itm/1")
+    use_adapter(app, FakeAdapter([offer], total=137))
+    ebay = stores_by_id(client.get(f"/api/merch?{FRIEREN}&country=US"))["ebay"]
+    assert ebay["live"] is True
+    assert ebay["total"] == 137 and ebay["more"] is False
+    assert len(ebay["offers"]) == 1  # the count covers more than the listings shown
+
+
+def test_otaku_house_online_is_singapore_only(client: TestClient) -> None:
+    catalog = {s.id: s for s in load_catalog()}
+    assert catalog["otaku_house_online"].type == "shopify"
+    assert catalog["otaku_house_online"].available_in("SG")
+    assert not catalog["otaku_house_online"].available_in("MY")
+    # With shop listings turned off it's a plain search link, still signed for /go/
+    otaku = stores_by_id(client.get(f"/api/merch?{FRIEREN}&country=SG"))["otaku_house_online"]
+    assert otaku["status"] == "not_configured" and otaku["live"] is False
+    assert target(otaku["search_url"]) == "https://shop.otakuhouse.com/search?q=Frieren"
 
 
 def test_slow_store_times_out_without_blocking_others(
@@ -159,6 +185,7 @@ def test_ebay_adapter_maps_listings(client: TestClient, settings) -> None:
     ebay = stores["ebay"]
 
     assert ebay["status"] == "ok" and ebay["affiliate"] is True
+    assert ebay["total"] == 1  # eBay sent no total, so it's the listings shown
     offer = ebay["offers"][0]
     assert offer["price"] == {"amount": 24.99, "currency": "USD"}
     assert offer["shipping"] == {"amount": 0.0, "currency": "USD"}

@@ -73,6 +73,10 @@ export interface StoreResult {
   search_url: string | null;
   search_term: string;
   affiliate: boolean;
+  /** OshiLoot can see this store's listings. Without it, the store is a search link only. */
+  live: boolean;
+  total: number | null; // matching listings, when the store says
+  more: boolean; // total is a lower bound ("10+")
 }
 
 export interface Outlet {

@@ -1,6 +1,8 @@
 # Stores the app knows about. Add a store here; add an adapter only if it has an API.
 #
-# type:     ebay_api = live listings through an adapter; linkout = a search link only
+# type:     ebay_api or shopify = live listings through an adapter (counts shown, and the
+#           store is hidden when nothing matches); linkout = a search link only, because the
+#           store has no API or feed, so OshiLoot can't see what it stocks
 # term:     which title to search with (ja falls back to the main title when missing)
 # ships_to: "*" or a list of country codes; exclude removes countries from "*"
 # markets:  per-country search URLs (the store only appears in those countries)
@@ -67,6 +69,17 @@ stores:
       PH: "https://www.carousell.ph/search/{q}/"
       TW: "https://tw.carousell.com/search/{q}/"
       ID: "https://id.carousell.com/search/{q}/"
+
+  # Otaku House's online shop runs on Shopify, so its own storefront search gives live
+  # listings. Shown in Singapore only, where its shops are.
+  - id: otaku_house_online
+    name: Otaku House online
+    kind: official
+    type: shopify
+    term: en
+    shopify_url: "https://shop.otakuhouse.com"
+    markets:
+      SG: "https://shop.otakuhouse.com/search?q={q}"
 
   # Singapore's own online anime shop. Its physical stores (Plaza Singapura, VivoCity) have
   # closed. The site blocks automated checks, so this pattern is unverified.

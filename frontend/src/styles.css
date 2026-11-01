@@ -243,37 +243,136 @@ input:not([type="radio"], [type="checkbox"]):hover {
   justify-items: start;
 }
 
-/* Home */
+/* Home: a slim search bar, then a short centred intro, so the first row of anime shows on
+   the first screen of a laptop or a phone. */
 
-.intro {
-  padding: 48px 0 40px;
+.search {
   display: grid;
-  gap: 20px;
+  gap: 12px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.search-bar input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.search-bar .button {
+  min-height: 44px;
+}
+
+.search-results {
+  display: grid;
+  gap: 16px;
+  padding: 8px 0 16px;
+}
+
+.hero {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: clamp(16px, 3.5vh, 40px) 0 0;
 }
 
 .headline {
-  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-size: clamp(2rem, 4.6vw, 3.75rem);
   font-weight: 900;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-  max-width: 19ch;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 
 .lede {
-  font-size: var(--step-1);
+  font-size: clamp(1.05rem, 1.7vw, 1.4rem);
   color: var(--muted);
-  max-width: 52ch;
-  line-height: 1.5;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+.list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 6px;
 }
 
 .username-form {
-  display: grid;
+  display: flex;
   gap: 8px;
-  max-width: 560px;
+  width: min(460px, 100%);
 }
 
-.username-form label {
+.username-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-or {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+/* MyAnimeList's blue, so the button reads as MyAnimeList's own sign-in. */
+.button-mal {
+  font: inherit;
   font-weight: 700;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius);
+  background: #2e51a2;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button-mal:hover {
+  background: #24428a;
+}
+
+.button-small {
+  font: inherit;
+  font-size: var(--step--1);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.button-small:hover {
+  border-color: var(--ink);
+}
+
+.list {
+  padding-top: 32px;
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.list-owner {
+  color: var(--muted);
+}
+
+.list-owner strong {
+  color: var(--ink);
 }
 
 .tabs {
@@ -385,26 +484,10 @@ input:not([type="radio"], [type="checkbox"]):hover {
   text-decoration: underline;
 }
 
-.search {
-  padding-top: 64px;
-  display: grid;
-  gap: 16px;
-  max-width: 100%;
-}
-
-.search h2 {
-  font-size: var(--step-2);
-  font-weight: 700;
-}
-
-.search .field-row input {
-  flex: 1;
-}
-
 /* Browse rows: this season's anime and the all-time favourites, on the same shelves as a list. */
 
 .browse {
-  padding-top: 56px;
+  padding-top: 40px;
   display: grid;
   gap: 12px;
 }
@@ -632,6 +715,37 @@ input:not([type="radio"], [type="checkbox"]):hover {
 .store-name {
   font-weight: 700;
   font-size: var(--step-1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+/* How many listings a store has: the price-sticker yellow, like the prices. */
+.store-count {
+  font-size: var(--step--1);
+  font-weight: 700;
+  background: var(--sticker);
+  color: var(--sticker-ink);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.store-also {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.no-listings {
+  margin-top: 32px;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--obi);
+  max-width: 72ch;
 }
 
 .store-search {
@@ -1179,6 +1293,32 @@ input:not([type="radio"], [type="checkbox"]):hover {
 @media (max-width: 640px) {
   .header {
     flex-wrap: wrap;
+  }
+
+  .hero {
+    gap: 8px;
+    padding-top: 20px;
+  }
+
+  .list-actions {
+    gap: 8px;
+  }
+
+  .list-actions > form {
+    width: 100%;
+  }
+
+  .list-or,
+  .hint-long {
+    display: none;
+  }
+
+  .button-mal {
+    width: 100%;
+  }
+
+  .browse {
+    padding-top: 32px;
   }
 
   .field-row {

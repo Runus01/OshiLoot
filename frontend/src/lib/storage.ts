@@ -27,6 +27,13 @@ export const saveCountry = (code: string) => write(local, COUNTRY_KEY, code);
 
 export const savedUsername = () => read(local, USERNAME_KEY);
 export const saveUsername = (name: string) => write(local, USERNAME_KEY, name);
+export function forgetUsername(): void {
+  try {
+    local().removeItem(USERNAME_KEY);
+  } catch {
+    // nothing to forget
+  }
+}
 
 // MyAnimeList's terms keep users' list data off our server, so the list lives in the
 // browser only, and only for this tab session.
