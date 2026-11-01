@@ -128,6 +128,8 @@ rather hover in silence.
   not in a database. Signing out deletes it.
 - When you click through to a store, OshiLoot records only the store, the anime and the
   country, nothing about you.
+- oshiloot.com counts visits with Cloudflare Web Analytics, which uses no cookies and
+  doesn't track individual visitors.
 
 ## Run it on your own computer
 
@@ -260,6 +262,7 @@ GitHub runs these on every pull request.
 | `429 Too Many Requests ... Data limit exceeded` building Docker | Amazon's public image registry is limiting your network. Run the backend without Docker (step 4), or sign in first: `aws ecr-public get-login-password --region us-east-1 \| docker login --username AWS --password-stdin public.ecr.aws`. |
 | `not authorized to perform: iam:CreateOpenIDConnectProvider` deploying `OshiLootBase` | Your AWS account has projects, which block GitHub's keyless sign-in. Deploy with `-c githubAuth=keys` ([step 2](#2-create-the-base-stack)). |
 | `aws` or `cdk` says your session or token has expired | Sign in again with `aws login --profile oshiloot`. It lasts 12 hours. |
+| `clicks_report.py` says it can't find credentials, or no clicks table | Set `$env:AWS_PROFILE` and `$env:AWS_REGION`, and sign in with `aws login --profile oshiloot`. |
 | `address already in use` | Something else is on port 8080 or 5173. Close the other terminal running OshiLoot, or restart your computer. |
 
 ## How it's built
@@ -510,6 +513,66 @@ The first domain is the site's address; the others redirect to it.
    ```
 
    Any later deploy restarts it too.
+
+### 8. Count visitors (optional)
+
+Cloudflare Web Analytics is free and uses no cookies, so it needs no cookie banner. It works
+even when your DNS records are "DNS only".
+
+1. In the Cloudflare dashboard, open **Web Analytics** (under Analytics & Logs) → **Add a
+   site**, and enter your domain. Choose the JavaScript snippet, and copy the token from it:
+   the letters and digits in `data-cf-beacon='{"token": "…"}'`.
+2. Tell the deploy, and deploy again:
+
+   ```powershell
+   gh variable set CF_ANALYTICS_TOKEN --body "YOUR_TOKEN"
+   gh workflow run deploy.yml --ref main
+   ```
+
+Visits show in Cloudflare's Web Analytics dashboard within minutes. It keeps six months.
+
+### 9. Turn on affiliate links (optional)
+
+First get MyAnimeList's written approval to earn money (see
+[Data sources](#data-sources-terms-and-credits)), and join the programmes you want. Then save
+each ID in Parameter Store and restart the backend as in step 7:
+
+```powershell
+aws ssm put-parameter --name /oshiloot/ebay_campaign_id --type SecureString "--value=YOUR_EPN_CAMPAIGN_ID" --overwrite
+aws ssm put-parameter --name /oshiloot/cdjapan_affiliate_template --type SecureString "--value=YOUR_CDJAPAN_LINK_WITH_{path}" --overwrite
+aws ssm put-parameter --name /oshiloot/apple_affiliate_token --type SecureString "--value=YOUR_PARTNER_TOKEN" --overwrite
+```
+
+| Setting | What to paste |
+| --- | --- |
+| `ebay_campaign_id` | Your eBay Partner Network campaign ID |
+| `cdjapan_affiliate_template` | A link from CDJapan's affiliate link maker, with `{path}` where the page's path goes |
+| `apple_affiliate_token` | Your Apple Performance Partners token (the `at=` value) |
+
+Leave out any you haven't joined. Each programme's own dashboard shows your clicks, orders
+and commission, and pays you directly.
+
+### See how it's used
+
+- **Visitors:** Cloudflare's Web Analytics dashboard (step 8).
+- **Store clicks:** every click out to a store is recorded with the store, the anime and the
+  country, nothing about the person. For a month's summary, and a CSV of every click, run
+  this in `backend` with the virtual environment active:
+
+  ```powershell
+  python scripts/clicks_report.py --month 2026-11 --csv clicks-2026-11.csv
+  ```
+
+- **What people do:** in the AWS console, go to **CloudWatch** → **Logs Insights**, choose
+  the log group starting `OshiLootApp-BackendLogs`, and run this. It lists each kind of
+  request over the last three months, such as lists loaded (`/api/anime/users/{username}/list`)
+  and anime pages opened (`/api/merch`), with how fast 95% were answered:
+
+  ```text
+  filter ispresent(route)
+  | stats count() as requests, pct(duration_ms, 95) as p95_ms by route
+  | sort requests desc
+  ```
 
 **To remove everything,** run `npx cdk destroy OshiLootApp OshiLootBase` in `infra`. The
 click history table, the Parameter Store settings and the certificate are kept; delete them
