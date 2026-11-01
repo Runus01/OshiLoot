@@ -44,6 +44,14 @@ class Offer(BaseModel):
     others: list[str] = []
 
 
+class Listings(BaseModel):
+    """What a store's search returned: the listings shown, and how many matched in all."""
+
+    offers: list[Offer]
+    total: int | None = None  # None when the store doesn't say
+    more: bool = False  # True when total is only a lower bound ("10+")
+
+
 class StoreResult(BaseModel):
     store: str
     name: str
@@ -53,6 +61,11 @@ class StoreResult(BaseModel):
     search_url: str | None = None
     search_term: str
     affiliate: bool = False
+    # live: OshiLoot can see this store's listings (it has an API or feed, and it's set up).
+    # Stores without one are search links only, so their stock is unknown.
+    live: bool = False
+    total: int | None = None
+    more: bool = False
 
 
 class Outlet(BaseModel):

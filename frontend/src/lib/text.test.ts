@@ -42,6 +42,9 @@ describe("splitByCompany", () => {
       search_url: null,
       search_term: "Frieren Fern",
       affiliate: false,
+      live: true,
+      total: 2,
+      more: false,
       offers: [offer("Fern stand"), offer("Fern and Stark poster", ["Stark"])],
     };
     const { solo, group } = splitByCompany([store]);

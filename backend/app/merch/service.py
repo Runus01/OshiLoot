@@ -116,9 +116,15 @@ class MerchService:
         if adapter is None or not adapter.configured:
             result.status = "not_configured"
             return result
+        result.live = True
         try:
-            result.offers = await asyncio.wait_for(
+            listings = await asyncio.wait_for(
                 adapter.search(term, country), self._settings.store_deadline_seconds
+            )
+            result.offers, result.total, result.more = (
+                listings.offers,
+                listings.total,
+                listings.more,
             )
             result.affiliate = adapter.affiliate
         except TimeoutError:

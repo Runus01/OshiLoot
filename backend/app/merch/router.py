@@ -8,6 +8,7 @@ from app.core.deps import get_cache, get_http, get_settings
 from app.core.storage import KeyValueStore
 from app.merch.adapters.base import StoreAdapter
 from app.merch.adapters.ebay import EbayAdapter
+from app.merch.adapters.shopify import ShopifyAdapter
 from app.merch.catalog import load_catalog, load_shops
 from app.merch.models import CastMember, CharacterQuery, MerchResponse, Titles
 from app.merch.service import MerchService
@@ -21,7 +22,11 @@ def get_adapters(
     http: Annotated[httpx.AsyncClient, Depends(get_http)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, StoreAdapter]:
-    return {"ebay": EbayAdapter(http, settings)}
+    adapters: dict[str, StoreAdapter] = {"ebay": EbayAdapter(http, settings)}
+    for store in load_catalog():
+        if store.type == "shopify" and store.shopify_url:
+            adapters[store.id] = ShopifyAdapter(http, settings, store.shopify_url)
+    return adapters
 
 
 def get_service(

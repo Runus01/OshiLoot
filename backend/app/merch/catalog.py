@@ -17,13 +17,14 @@ class StoreDef(BaseModel):
     id: str
     name: str
     kind: StoreKind
-    type: Literal["ebay_api", "linkout"]
+    type: Literal["ebay_api", "shopify", "linkout"]
     term: Literal["en", "ja"] = "en"
     search_url: str | None = None
     markets: dict[str, str] = {}
     ships_to: Literal["*"] | list[str] = "*"
     exclude: list[str] = []
     affiliate_template_setting: str | None = None
+    shopify_url: str | None = None  # type shopify: the shop's address
 
     def available_in(self, country: str) -> bool:
         if self.markets:

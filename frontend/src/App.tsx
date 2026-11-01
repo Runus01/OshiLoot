@@ -1,4 +1,5 @@
-import { BrowserRouter, Link, Route, Routes } from "react-router";
+import { useEffect } from "react";
+import { BrowserRouter, Link, Route, Routes, useLocation, useNavigationType } from "react-router";
 import logo from "./assets/logo.svg";
 import { CountryDialog } from "./components/CountryDialog";
 import { RegionProvider, useRegion } from "./context";
@@ -11,6 +12,7 @@ export function App() {
   return (
     <RegionProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <div className="page">
           <Header />
           <main className="main">
@@ -28,6 +30,19 @@ export function App() {
       </BrowserRouter>
     </RegionProvider>
   );
+}
+
+/**
+ * Opening a link (an anime, a character, a song) starts at the top of the new page. The
+ * browser's back and forward buttons are left alone, so they return to where you were.
+ */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  const navigation = useNavigationType();
+  useEffect(() => {
+    if (navigation !== "POP") window.scrollTo(0, 0);
+  }, [pathname, navigation]);
+  return null;
 }
 
 function Header() {

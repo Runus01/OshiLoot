@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { api, ApiError } from "../api";
 import { CharacterCard } from "../components/CharacterCard";
-import { OfferGrid, ShopsSection, StoreLinks } from "../components/Offers";
+import { NoListingsNote, OfferGrid, ShopsSection, StoreLinks } from "../components/Offers";
 import { ThemesSection } from "../components/ThemeSongs";
 import { useRegion } from "../context";
+import { groupStores } from "../lib/stores";
 import type { Anime, Character, MerchResponse, StoreKind } from "../types";
 
 const SECTIONS: { kind: StoreKind; title: string; note: string }[] = [
@@ -85,12 +86,14 @@ export function AnimePage() {
 
       {!country && <p className="loading">Choose your country to see stores that ship to you.</p>}
       {country && !merch && <p className="loading">Checking stores that ship to {country.name}…</p>}
+      {country && merch && <NoListingsNote stores={merch.stores} term={titles.en ?? titles.main} country={country} />}
       {country &&
         merch &&
         SECTIONS.map(({ kind, title, note }) => {
           const stores = merch.stores.filter((s) => s.kind === kind);
-          if (stores.length === 0) return null;
-          const items = stores.flatMap((store) => store.offers.map((offer) => ({ store, offer })));
+          const { found, searchOnly } = groupStores(stores);
+          if (found.length === 0 && searchOnly.length === 0) return null;
+          const items = found.flatMap((store) => store.offers.map((offer) => ({ store, offer })));
           return (
             <section key={kind} className="store-section" aria-labelledby={`section-${kind}`}>
               <h2 id={`section-${kind}`}>{title}</h2>

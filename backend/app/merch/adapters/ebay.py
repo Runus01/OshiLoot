@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings
-from app.merch.models import Money, Offer
+from app.merch.models import Listings, Money, Offer
 
 API_BASE = {"production": "https://api.ebay.com", "sandbox": "https://api.sandbox.ebay.com"}
 SCOPE = "https://api.ebay.com/oauth/api_scope"
@@ -65,7 +65,7 @@ class EbayAdapter:
         _tokens[key] = (body["access_token"], time.time() + int(body["expires_in"]))
         return body["access_token"]
 
-    async def search(self, term: str, country: str) -> list[Offer]:
+    async def search(self, term: str, country: str) -> Listings:
         context = f"contextualLocation=country%3D{country}"
         if self._settings.ebay_campaign_id:
             context = f"affiliateCampaignId={self._settings.ebay_campaign_id},{context}"
@@ -79,8 +79,9 @@ class EbayAdapter:
             },
         )
         response.raise_for_status()
+        body = response.json()
         offers = []
-        for item in response.json().get("itemSummaries", []):
+        for item in body.get("itemSummaries", []):
             shipping = (item.get("shippingOptions") or [{}])[0].get("shippingCost")
             offers.append(
                 Offer(
@@ -93,4 +94,5 @@ class EbayAdapter:
                     condition=item.get("condition"),
                 )
             )
-        return offers
+        # total counts every match that ships to the country, not just the 24 shown.
+        return Listings(offers=offers, total=body.get("total", len(offers)))

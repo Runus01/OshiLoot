@@ -34,7 +34,8 @@ the CD or download.
 - **Browse what's on.** The home page shows the anime that premiered this season, plus the
   top rated and the most popular of all time, so you can pick one without searching.
 - **Search any anime**, in English, romaji or Japanese.
-- **Find merch that ships to you.** Live eBay listings, plus searches on CDJapan, AmiAmi,
+- **Find merch that ships to you.** Live listings from eBay and, in Singapore, Otaku
+  House's online shop, with how many each store has. Plus searches on CDJapan, AmiAmi,
   HobbyLink Japan, Mercari (via Buyee), Carousell and Hakken!, filtered to stores that
   deliver to your country, with prices converted to your currency.
 - **Visit shops in person.** In Singapore: La Tendo, Otaku House and Books Kinokuniya, with
@@ -64,11 +65,13 @@ own website, and OshiLoot never sees your password. Your list then loads automat
 whenever you come back. **Sign out** is next to your name.
 
 Your anime appear on shelves by score, from 10 down. Switch between **Completed** and
-**Watching** with the tabs.
+**Watching** with the tabs. **Clear list** puts the page back as it was, ready for another
+username.
 
 ### 3. Browse, or search for any anime
 
-Below your list, three rows of covers give you somewhere to start:
+Three rows of covers give you somewhere to start, below the intro (and below your list,
+once it's loaded):
 
 - **New this season:** anime that premiered this season, the most followed first. Seasons
   follow Japan's calendar, where new shows premiere.
@@ -78,16 +81,20 @@ Below your list, three rows of covers give you somewhere to start:
 
 Scroll a row sideways with its arrow buttons, or swipe on a phone.
 
-Under **Or search any anime**, type a title in English, romaji or Japanese, such as
-*Frieren*, *Bocchi the Rock!* or *葬送のフリーレン*.
+Or use **Search any anime** at the top of the page: type a title in English, romaji or
+Japanese, such as *Frieren*, *Bocchi the Rock!* or *葬送のフリーレン*. **Clear search** hides
+the results again.
 
 ### 4. An anime's page
 
 Open any anime to see, from top to bottom:
 
 - **Characters**, main roles first. **Show more characters** loads the rest.
-- **Official stores** and **Second-hand**: live listings with prices and shipping where a
-  store provides them, then a search link for every store that ships to you.
+- **Official stores** and **Second-hand**: live listings with prices and shipping from
+  the stores that share them, each labelled with how many listings it has. Those stores
+  are left out when they have nothing. Stores that don't share their stock follow as
+  search links, since OshiLoot can't tell what they have. If no store has a listing,
+  OshiLoot says so.
 - **Shops in [your country]**, with addresses and a **Directions** link for each outlet,
   and a search of the shop's online store where it has one. Singapore only, for now.
 - **Theme songs**, the openings and endings.
@@ -104,8 +111,9 @@ Click a character to see their merch, split into:
   with who else is on it.
 - **Search stores for [name]:** every store's own search, for more than the live listings.
 
-Live listings come from eBay, so this split needs eBay API keys (see
-[Optional settings](#optional-settings)). Without them, the store searches still work.
+Live listings come from eBay (and Otaku House's online shop in Singapore), so this split
+works best with eBay API keys (see [Optional settings](#optional-settings)). Without them,
+the store searches still work.
 
 ### 6. Theme songs
 
@@ -222,6 +230,7 @@ All of these go in `.env`. Without them the site still works, with plain store l
 | `EBAY_CAMPAIGN_ID` | eBay commission on clicks | [eBay Partner Network](https://partnernetwork.ebay.com): your campaign's ID |
 | `CDJAPAN_AFFILIATE_TEMPLATE` | CDJapan commission | CDJapan's affiliate programme: a link with `{path}` where the page goes |
 | `APPLE_AFFILIATE_TOKEN` | Apple Music and iTunes commission | [Apple Performance Partners](https://performance-partners.apple.com): your Partner Token |
+| `SHOP_LISTINGS` | On by default. Set to `false` to turn off live listings from Shopify shops (Otaku House online), leaving their search links | |
 
 Restart the backend after changing `.env`.
 
@@ -320,7 +329,8 @@ docs/adr/    design decisions
 ```
 
 **Adding a store:** add it to `backend/app/merch/stores.yaml` with its search URL (`{q}`
-marks the search term). Shops to visit in person go under `shops:`, by country code. CD and
+marks the search term). If the store runs on Shopify, give it `type: shopify` and its
+`shopify_url`, and OshiLoot reads its listings from the shop's own storefront search. Shops to visit in person go under `shops:`, by country code. CD and
 vinyl stores go in `backend/app/music/stores.yaml`.
 
 ## Host it online with AWS
