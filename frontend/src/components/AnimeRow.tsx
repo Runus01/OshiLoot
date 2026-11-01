@@ -10,13 +10,14 @@ interface Props {
   title: string;
   note: string;
   anime: Anime[] | null; // null while loading
+  detail?: (anime: Anime) => string | null; // a line under each title
 }
 
 /**
  * A titled shelf of covers that scrolls sideways: swipe on a phone, or use the arrow
  * buttons with a mouse. Keyboard users tab through the covers, which scrolls the row.
  */
-export function AnimeRow({ id, title, note, anime }: Props) {
+export function AnimeRow({ id, title, note, anime, detail }: Props) {
   const list = useRef<HTMLUListElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
@@ -63,7 +64,7 @@ export function AnimeRow({ id, title, note, anime }: Props) {
         {anime
           ? anime.map((item) => (
               <li key={item.id}>
-                <Cover anime={item} />
+                <Cover anime={item} detail={detail?.(item)} />
               </li>
             ))
           : Array.from({ length: PLACEHOLDERS }, (_, i) => (

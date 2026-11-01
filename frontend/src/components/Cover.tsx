@@ -2,7 +2,8 @@ import { Link } from "react-router";
 import { displayTitle } from "../lib/scores";
 import type { Anime } from "../types";
 
-export function Cover({ anime }: { anime: Anime }) {
+/** detail: an optional line under the title, such as "Score 9.30". */
+export function Cover({ anime, detail }: { anime: Anime; detail?: string | null }) {
   const title = displayTitle(anime);
   return (
     <Link to={`/anime/${anime.id}`} state={{ anime }} className="cover">
@@ -12,6 +13,7 @@ export function Cover({ anime }: { anime: Anime }) {
         <span className="cover-blank" aria-hidden="true" />
       )}
       <span className="cover-title">{title}</span>
+      {detail && <span className="cover-detail">{detail}</span>}
     </Link>
   );
 }

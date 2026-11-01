@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 
 from app.anime.models import (
@@ -16,6 +17,8 @@ from app.core.storage import KeyValueStore
 HOUR = 60 * 60
 DAY = 24 * HOUR
 ROW_SIZE = 24  # covers in each row on the home page
+
+Fetch = Callable[[int], Awaitable[list[Anime]]]
 
 
 class AnimeService:
@@ -64,11 +67,19 @@ class AnimeService:
         return result
 
     async def popular(self) -> list[Anime]:
-        """The all-time most popular anime for the home page."""
-        key = f"anime:popular:{ROW_SIZE}"
+        """The all-time most popular anime (most MyAnimeList members) for the home page."""
+        return await self._chart("popular", self._source.popular)
+
+    async def top_rated(self) -> list[Anime]:
+        """The all-time highest-scored anime for the home page."""
+        return await self._chart("top-rated", self._source.top_rated)
+
+    async def _chart(self, name: str, fetch: Fetch) -> list[Anime]:
+        key = f"anime:{name}:{ROW_SIZE}"
         if (cached := await self._cache.get(key)) is not None:
             return [Anime.model_validate(a) for a in cached]
-        anime = await self._source.popular(ROW_SIZE)
+        # A few spare, because music videos and promos are left out.
+        anime = (await fetch(ROW_SIZE + 8))[:ROW_SIZE]
         await self._cache.put(key, [a.model_dump() for a in anime], DAY)
         return anime
 

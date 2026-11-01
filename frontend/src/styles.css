@@ -374,6 +374,13 @@ input:not([type="radio"], [type="checkbox"]):hover {
   overflow: hidden;
 }
 
+.cover-detail {
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: -4px;
+}
+
 .cover:hover .cover-title {
   text-decoration: underline;
 }

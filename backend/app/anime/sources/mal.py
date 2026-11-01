@@ -137,13 +137,24 @@ class MalSource:
 
     async def popular(self, limit: int) -> list[Anime]:
         """The anime on the most MyAnimeList lists, all time."""
+        return await self._chart("bypopularity", limit)
+
+    async def top_rated(self, limit: int) -> list[Anime]:
+        """MyAnimeList's Top Anime: the highest scores, all time."""
+        return await self._chart("all", limit)
+
+    async def _chart(self, ranking_type: str, limit: int) -> list[Anime]:
         response = await self._get(
             f"{MAL_API}/anime/ranking",
-            {"ranking_type": "bypopularity", "limit": limit, "fields": ANIME_FIELDS},
+            {"ranking_type": ranking_type, "limit": limit, "fields": ANIME_FIELDS},
         )
         if response.status_code != 200:
             raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
-        return [_to_anime(item["node"]) for item in response.json().get("data", [])]
+        return [
+            _to_anime(item["node"])
+            for item in response.json().get("data", [])
+            if item["node"].get("media_type") not in NOT_SHOWS
+        ]
 
     async def themes(self, anime_id: int) -> Themes | None:
         # Not in MAL's API docs, but the anime endpoint returns both fields when asked.

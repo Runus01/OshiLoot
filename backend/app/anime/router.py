@@ -98,7 +98,7 @@ async def search(
 
 
 # The home page rows. Browsers may keep them for an hour; the server refreshes them from
-# MyAnimeList every few hours. Both routes must come before /{anime_id}.
+# MyAnimeList every few hours. These routes must come before /{anime_id}.
 HOME_ROW_CACHE = "public, max-age=3600"
 
 
@@ -118,6 +118,17 @@ async def popular(service: Service, response: Response) -> list[Anime]:
     """The anime on the most MyAnimeList lists, all time."""
     try:
         result = await service.popular()
+    except AnimeSourceError as exc:
+        raise upstream_error(exc) from exc
+    response.headers["Cache-Control"] = HOME_ROW_CACHE
+    return result
+
+
+@router.get("/top-rated", response_model=list[Anime])
+async def top_rated(service: Service, response: Response) -> list[Anime]:
+    """MyAnimeList's highest-scored anime, all time."""
+    try:
+        result = await service.top_rated()
     except AnimeSourceError as exc:
         raise upstream_error(exc) from exc
     response.headers["Cache-Control"] = HOME_ROW_CACHE
