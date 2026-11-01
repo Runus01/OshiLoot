@@ -90,6 +90,7 @@ export const api = {
   // The home page rows.
   seasonal: (signal?: AbortSignal) => getJson<SeasonalAnime>("/api/anime/seasonal", signal),
   popular: (signal?: AbortSignal) => getJson<Anime[]>("/api/anime/popular", signal),
+  topRated: (signal?: AbortSignal) => getJson<Anime[]>("/api/anime/top-rated", signal),
 
   merch: (anime: Anime, country: string, signal?: AbortSignal) =>
     getJson<MerchResponse>(`/api/merch?${titleParams(anime, country)}`, signal),

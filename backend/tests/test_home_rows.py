@@ -96,9 +96,39 @@ def test_popular_asks_mal_for_its_popularity_ranking(client: TestClient) -> None
     assert [a["titles"]["main"] for a in first.json()] == ["Shingeki no Kyojin", "Death Note"]
     assert first.headers["cache-control"] == "public, max-age=3600"
     assert route.call_count == 1
-    sent = route.calls[0].request.url.params
-    assert sent["ranking_type"] == "bypopularity"
-    assert sent["limit"] == str(ROW_SIZE)
+    assert route.calls[0].request.url.params["ranking_type"] == "bypopularity"
+
+
+@respx.mock
+def test_top_rated_asks_mal_for_its_score_ranking(client: TestClient) -> None:
+    route = respx.get(f"{MAL_API}/anime/ranking").respond(
+        json={
+            "data": [
+                {"node": node(52991, "Sousou no Frieren"), "ranking": {"rank": 1}},
+                {"node": node(99, "A music video", "music"), "ranking": {"rank": 2}},
+                {"node": node(5114, "Fullmetal Alchemist: Brotherhood"), "ranking": {"rank": 3}},
+            ]
+        }
+    )
+
+    first = client.get("/api/anime/top-rated")
+    client.get("/api/anime/top-rated")
+
+    assert first.status_code == 200
+    assert [a["id"] for a in first.json()] == [52991, 5114]  # the music video is left out
+    assert first.json()[0]["mean_score"] == 8.1
+    assert first.headers["cache-control"] == "public, max-age=3600"
+    assert route.call_count == 1
+    assert route.calls[0].request.url.params["ranking_type"] == "all"
+
+
+@respx.mock
+def test_charts_show_one_row(client: TestClient) -> None:
+    respx.get(f"{MAL_API}/anime/ranking").respond(
+        json={"data": [{"node": node(i, f"Show {i}")} for i in range(1, 40)]}
+    )
+    assert len(client.get("/api/anime/top-rated").json()) == ROW_SIZE
+    assert len(client.get("/api/anime/popular").json()) == ROW_SIZE
 
 
 @respx.mock

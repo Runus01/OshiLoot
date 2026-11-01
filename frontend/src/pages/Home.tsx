@@ -317,13 +317,20 @@ function Search() {
   );
 }
 
-type Row = "season" | "popular";
+type Row = "season" | "topRated" | "popular";
+
+const scoreLine = (anime: Anime) => (anime.mean_score ? `Score ${anime.mean_score.toFixed(2)}` : null);
 
 /** This season's new anime and the all-time favourites, for browsing without a search. */
 function Browse() {
   const [season, setSeason] = useState<SeasonalAnime | null>(null);
+  const [topRated, setTopRated] = useState<Anime[] | null>(null);
   const [popular, setPopular] = useState<Anime[] | null>(null);
-  const [failed, setFailed] = useState<Record<Row, boolean>>({ season: false, popular: false });
+  const [failed, setFailed] = useState<Record<Row, boolean>>({
+    season: false,
+    topRated: false,
+    popular: false,
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -332,6 +339,7 @@ function Browse() {
       if (err.name !== "AbortError") setFailed((current) => ({ ...current, [row]: true }));
     };
     api.seasonal(controller.signal).then(setSeason).catch(leaveOut("season"));
+    api.topRated(controller.signal).then(setTopRated).catch(leaveOut("topRated"));
     api.popular(controller.signal).then(setPopular).catch(leaveOut("popular"));
     return () => controller.abort();
   }, []);
@@ -346,11 +354,20 @@ function Browse() {
           anime={season?.anime ?? null}
         />
       )}
+      {!failed.topRated && topRated?.length !== 0 && (
+        <AnimeRow
+          id="browse-top-rated"
+          title="Top rated"
+          note="All time, by MyAnimeList score"
+          anime={topRated}
+          detail={scoreLine}
+        />
+      )}
       {!failed.popular && popular?.length !== 0 && (
         <AnimeRow
           id="browse-popular"
           title="Most popular"
-          note="All time, on MyAnimeList"
+          note="All time, by MyAnimeList members"
           anime={popular}
         />
       )}

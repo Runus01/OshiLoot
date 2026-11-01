@@ -4,14 +4,15 @@
 
 ***Find treasures for your oshi***
 
-[![ci](https://github.com/Runus01/oshiloot/actions/workflows/ci.yml/badge.svg)](https://github.com/Runus01/oshiloot/actions/workflows/ci.yml)
+[![ci](https://github.com/Runus01/OshiLoot/actions/workflows/ci.yml/badge.svg)](https://github.com/Runus01/OshiLoot/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/Runus01/OshiLoot)](https://github.com/Runus01/OshiLoot/releases)
 
 OshiLoot reads your MyAnimeList, lines up your anime by the scores you gave them, and shows
 where to buy official and second-hand merch that ships to your country. Pick a favourite
 character to see merch of just them, or play an anime's opening and ending songs and find
 the CD or download.
 
-**Try it:** _link coming soon_
+**Try it: [oshiloot.com](https://oshiloot.com)**
 
 ---
 
@@ -24,11 +25,14 @@ the CD or download.
 - [How it's built](#how-its-built)
 - [Host it online with AWS](#host-it-online-with-aws)
 - [Data sources, terms and credits](#data-sources-terms-and-credits)
+- [What's next](#whats-next)
 
 ## What you can do
 
 - **See your list by score.** Enter a MyAnimeList username, or sign in with MyAnimeList if
   your list is private. Completed and Watching anime are grouped by your score, 10 first.
+- **Browse what's on.** The home page shows the anime that premiered this season, plus the
+  top rated and the most popular of all time, so you can pick one without searching.
 - **Search any anime**, in English, romaji or Japanese.
 - **Find merch that ships to you.** Live eBay listings, plus searches on CDJapan, AmiAmi,
   HobbyLink Japan, Mercari (via Buyee), Carousell and Hakken!, filtered to stores that
@@ -62,7 +66,17 @@ whenever you come back. **Sign out** is next to your name.
 Your anime appear on shelves by score, from 10 down. Switch between **Completed** and
 **Watching** with the tabs.
 
-### 3. Or search for any anime
+### 3. Browse, or search for any anime
+
+Below your list, three rows of covers give you somewhere to start:
+
+- **New this season:** anime that premiered this season, the most followed first. Seasons
+  follow Japan's calendar, where new shows premiere.
+- **Top rated:** MyAnimeList's highest-scored anime of all time, each with its score.
+- **Most popular:** the anime on the most MyAnimeList lists, of all time. Long-running
+  favourites lead here, so a newer hit can be top rated without being in this row yet.
+
+Scroll a row sideways with its arrow buttons, or swipe on a phone.
 
 Under **Or search any anime**, type a title in English, romaji or Japanese, such as
 *Frieren*, *Bocchi the Rock!* or *葬送のフリーレン*.
@@ -135,8 +149,8 @@ differences are noted.
 ### 1. Get the code
 
 ```powershell
-git clone https://github.com/Runus01/oshiloot.git
-cd oshiloot
+git clone https://github.com/Runus01/OshiLoot.git
+cd OshiLoot
 ```
 
 ### 2. Get a MyAnimeList API key
@@ -238,12 +252,14 @@ GitHub runs these on every pull request.
 | `running scripts is disabled on this system` when activating | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, then try again. |
 | `'vite' is not recognized` | Run `npm install` in `frontend` first. If it still fails, check `node --version` says 22 or newer. |
 | "No public list found for that username" | Check the spelling. If the list is private, use **Sign in with MyAnimeList** instead. |
-| A browser **username and password box** pops up on MyAnimeList | Don't type into it: it means your MyAnimeList app's **App Redirect URL** doesn't match. Set it to exactly `http://localhost:5173/api/anime/auth/callback`. |
+| A browser **username and password box** pops up on MyAnimeList | Don't type into it: it means your MyAnimeList app's **App Redirect URL** doesn't match. Set it to exactly `http://localhost:5173/api/anime/auth/callback`, or `https://YOUR-DOMAIN/api/anime/auth/callback` for the live site. |
 | No **Sign in with MyAnimeList** button | Add `MAL_CLIENT_SECRET` to `.env` and restart the backend. |
 | "MyAnimeList isn't configured on this server" | Add `MAL_CLIENT_ID` to `.env` and restart the backend. |
 | "Character info is busy right now" | AniList allows 30 requests a minute. Wait a minute and reload. |
 | Hovering over a song plays nothing | Click anywhere on the page once; browsers block sound until you do. |
 | `429 Too Many Requests ... Data limit exceeded` building Docker | Amazon's public image registry is limiting your network. Run the backend without Docker (step 4), or sign in first: `aws ecr-public get-login-password --region us-east-1 \| docker login --username AWS --password-stdin public.ecr.aws`. |
+| `not authorized to perform: iam:CreateOpenIDConnectProvider` deploying `OshiLootBase` | Your AWS account has projects, which block GitHub's keyless sign-in. Deploy with `-c githubAuth=keys` ([step 2](#2-create-the-base-stack)). |
+| `aws` or `cdk` says your session or token has expired | Sign in again with `aws login --profile oshiloot`. It lasts 12 hours. |
 | `address already in use` | Something else is on port 8080 or 5173. Close the other terminal running OshiLoot, or restart your computer. |
 
 ## How it's built
@@ -253,7 +269,7 @@ GitHub runs these on every pull request.
 | Website | React 19, TypeScript, Vite |
 | Backend | Python 3.12, FastAPI, one container on AWS Lambda |
 | Hosting | CloudFront, S3, DynamoDB, all set up with AWS CDK (TypeScript) |
-| CI/CD | GitHub Actions, signing in to AWS with OIDC, so no AWS keys are stored in GitHub |
+| CI/CD | GitHub Actions. Signs in to AWS with OIDC, so no AWS keys are stored in GitHub, or with a deploy-only key on accounts that can't use OIDC |
 
 The backend is a **modular monolith**: one app with five modules that never import each
 other, checked on every pull request by [import-linter](https://import-linter.readthedocs.io).
@@ -280,7 +296,7 @@ flowchart LR
 
 | Module | Handles |
 | --- | --- |
-| `anime` | Lists (public, or private after signing in), search, anime details and theme songs from MyAnimeList; characters from AniList |
+| `anime` | Lists (public, or private after signing in), search, this season's, the top-rated and the most popular anime, details and theme songs from MyAnimeList; characters from AniList |
 | `merch` | Store and shop catalogue (`stores.yaml`), live store searches with a deadline per store, sorting a character's listings into solo and group items |
 | `music` | A theme song in the user's Apple store, plus CD and vinyl shops |
 | `regions` | Countries, currencies and daily exchange rates |
@@ -306,84 +322,203 @@ vinyl stores go in `backend/app/music/stores.yaml`.
 
 ## Host it online with AWS
 
-Set this up once; after that, every merge to `main` deploys itself. Docker isn't needed on
-your computer, because GitHub Actions builds the container. It's designed to fit AWS's free
-allowances. The only regular cost is a few cents a month for storing container images.
+Set this up once; after that, every merge to `main` deploys itself. This is how
+[oshiloot.com](https://oshiloot.com) runs. Docker isn't needed on your computer, because
+GitHub Actions builds the container. It's designed to fit AWS's free allowances: the only
+regular costs are a few cents a month for storing container images, and your domain if you
+use one.
 
-1. **AWS account.** Create one at [aws.amazon.com](https://aws.amazon.com) and choose the
-   **Paid plan**. It gets the same sign-up credits, but unlike the Free plan, the account
-   doesn't close after six months. Turn on MFA and add a $1 budget alert. Then install the
-   AWS CLI (version 2.32 or newer) and sign in:
+You'll need the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+2.32 or newer, and the [GitHub CLI](https://cli.github.com) (`winget install --id GitHub.cli`,
+then `gh auth login`). Run the commands in PowerShell, starting in the repo's folder.
+
+### 1. AWS account
+
+Sign up at [aws.amazon.com](https://aws.amazon.com), then upgrade to the **Paid plan** in
+AWS Settings → **Billing** → **Upgrade**. Upgrading is free and keeps your sign-up credits,
+and unlike the Free plan, the account doesn't close after six months. You can also set a
+monthly **spend limit** (at least $20): if costs ever reach it, AWS pauses the site instead
+of charging more.
+
+Newer AWS accounts may be organised as **projects** in [AWS Settings](https://settings.aws.com).
+If yours is:
+
+- You sign in with your own login, such as a Builder ID or Google, not a root user, and IAM
+  users can't sign in to the console. Turn on MFA under **Manage security and sign-in**,
+  or in the Google, GitHub or Apple account you sign in with.
+- Your project has one region, chosen from your address. AWS Settings → **Project** →
+  **Overview** → **Additional info** shows it. Asia Pacific addresses get Sydney,
+  `ap-southeast-2`.
+
+Sign in from PowerShell, and give your project's region when asked:
+
+```powershell
+aws login --profile oshiloot
+$env:AWS_PROFILE = "oshiloot"
+$env:AWS_REGION  = "ap-southeast-2"     # your region
+aws sts get-caller-identity              # shows your account: you're signed in
+```
+
+The sign-in lasts 12 hours; after that, run `aws login --profile oshiloot` again. Set the
+two `$env:` lines in every new PowerShell window.
+
+### 2. Create the base stack
+
+The base stack holds the image registry and the role GitHub Actions deploys with.
+
+```powershell
+cd infra
+npm ci
+npx cdk bootstrap
+```
+
+How GitHub signs in to AWS depends on your account.
+
+**Accounts with projects** have built-in policies that block the identity provider GitHub's
+keyless sign-in needs. GitHub gets an access key instead, for a user that can do nothing
+but switch into the deploy role for an hour:
+
+```powershell
+npx cdk deploy OshiLootBase -c githubAuth=keys
+$key = (aws iam create-access-key --user-name oshiloot-github | ConvertFrom-Json).AccessKey
+gh secret set AWS_ACCESS_KEY_ID --body $key.AccessKeyId
+gh secret set AWS_SECRET_ACCESS_KEY --body $key.SecretAccessKey
+Remove-Variable key
+```
+
+The key goes straight into GitHub's encrypted secrets without being shown. If it ever
+leaks, delete it with `aws iam delete-access-key` and make a new one.
+
+**Other accounts** use GitHub's OIDC sign-in, so no keys are stored. Use your repo's exact
+name, because the role's permission is case-sensitive:
+
+```powershell
+$repo = gh repo view --json nameWithOwner -q .nameWithOwner
+npx cdk deploy OshiLootBase -c githubRepo=$repo
+```
+
+Either way, `cdk deploy` lists the security changes and asks you to approve them (type
+`y`), then prints `DeployRoleArn`. Keep it for step 4.
+
+### 3. Store the settings in AWS Parameter Store
+
+The live site reads its settings from Parameter Store, under `/oshiloot/`. This makes two
+random secrets and copies your MyAnimeList and eBay keys from `.env`, without showing any
+of them:
+
+```powershell
+cd ..
+foreach ($name in "link_signing_key", "session_secret") {
+  $value = python -c "import secrets; print(secrets.token_hex(32))"
+  aws ssm put-parameter --name "/oshiloot/$name" --type SecureString "--value=$value" | Out-Null
+  "saved /oshiloot/$name"
+}
+$copy = "MAL_CLIENT_ID", "MAL_CLIENT_SECRET", "EBAY_CLIENT_ID", "EBAY_CLIENT_SECRET"
+foreach ($line in Get-Content .env) {
+  if ($line -match '^\s*([A-Z_]+)\s*=\s*(.+?)\s*$' -and $copy -contains $Matches[1]) {
+    $name = $Matches[1].ToLower()
+    $value = $Matches[2].Trim('"')
+    aws ssm put-parameter --name "/oshiloot/$name" --type SecureString "--value=$value" --overwrite | Out-Null
+    "saved /oshiloot/$name"
+  }
+}
+$value = $null
+```
+
+`link_signing_key` is required: the backend won't start without it. The affiliate
+settings (`ebay_campaign_id`, `cdjapan_affiliate_template`, `apple_affiliate_token`) go
+here the same way, once MyAnimeList has approved the site earning money (see
+[Data sources](#data-sources-terms-and-credits)). Step 7 swaps in the MyAnimeList keys of a
+production app.
+
+### 4. Connect GitHub to AWS
+
+```powershell
+gh variable set AWS_DEPLOY_ROLE_ARN --body "YOUR_DEPLOY_ROLE_ARN"    # from step 2
+gh variable set AWS_REGION --body "ap-southeast-2"                  # your region
+```
+
+### 5. Deploy
+
+```powershell
+gh workflow run deploy.yml --ref main
+gh run watch
+```
+
+It builds the container, deploys, uploads the website and checks the site responds, in
+about six minutes. The site's address (`https://….cloudfront.net`) is in the run's summary.
+From now on, every merge to `main` deploys by itself.
+
+### 6. Use your own domain (optional)
+
+CloudFront only takes certificates from `us-east-1`, whatever region the rest of the site
+is in, and accounts with projects allow certificates there. Request one for your domain and
+its `www`:
+
+```powershell
+$cert = aws acm request-certificate --region us-east-1 --domain-name example.com --subject-alternative-names www.example.com --validation-method DNS --query CertificateArn --output text
+Start-Sleep 10
+aws acm describe-certificate --region us-east-1 --certificate-arn $cert --query "Certificate.DomainValidationOptions[].ResourceRecord" --output table
+```
+
+Add each CNAME record the table shows at your DNS provider, then wait for AWS to confirm.
+Keep those records: AWS uses them to renew the certificate every year.
+
+```powershell
+aws acm wait certificate-validated --region us-east-1 --certificate-arn $cert
+```
+
+Point the domain at CloudFront with two CNAME records, `@` (the bare domain) and `www`,
+both to your `….cloudfront.net` address. On Cloudflare, set both to **DNS only** (grey
+cloud); it allows a CNAME on the bare domain. Other DNS providers may call that an ALIAS or
+ANAME record.
+
+Then tell the deploy about the domain, and deploy again:
+
+```powershell
+gh variable set SITE_DOMAINS --body "example.com,www.example.com"
+gh variable set SITE_CERTIFICATE_ARN --body $cert
+gh workflow run deploy.yml --ref main
+```
+
+The first domain is the site's address; the others redirect to it.
+
+### 7. Turn on sign-in for the live site
+
+1. Create a second MyAnimeList app for production at
+   [myanimelist.net/apiconfig](https://myanimelist.net/apiconfig): **App Type** `web`,
+   **App Redirect URL** `https://YOUR-DOMAIN/api/anime/auth/callback`, **Homepage URL**
+   `https://YOUR-DOMAIN`. Use your `….cloudfront.net` address if you skipped step 6.
+2. Save its keys and the site's address, pasting each value when asked:
 
    ```powershell
-   aws login --profile oshiloot           # pick your region, e.g. ap-southeast-1 (Singapore)
-   $env:AWS_PROFILE = "oshiloot"
-   $env:AWS_REGION  = "ap-southeast-1"
-   aws sts get-caller-identity            # shows your account: you're signed in
+   $site = "https://YOUR-DOMAIN"
+   $id = Read-Host "Production MAL Client ID"
+   $secret = Read-Host "Production MAL Client Secret"
+   aws ssm put-parameter --name /oshiloot/mal_client_id --type SecureString "--value=$id" --overwrite | Out-Null
+   aws ssm put-parameter --name /oshiloot/mal_client_secret --type SecureString "--value=$secret" --overwrite | Out-Null
+   aws ssm put-parameter --name /oshiloot/public_url --type String "--value=$site" --overwrite | Out-Null
+   Remove-Variable id, secret
    ```
 
-2. **Create the base stack**: the image registry and the role GitHub Actions deploys with.
-   Use your repo's exact name, because the role's permission is case-sensitive:
+3. The backend reads its settings when it starts, so restart it:
 
    ```powershell
-   cd infra
-   npm install
-   npx cdk bootstrap
-   $repo = gh repo view --json nameWithOwner -q .nameWithOwner
-   npx cdk deploy OshiLootBase -c githubRepo=$repo
-   ```
-
-   Copy the `DeployRoleArn` it prints.
-
-3. **Store settings in AWS Parameter Store.** The live site reads everything under
-   `/oshiloot/`:
-
-   ```powershell
-   $key = python -c "import secrets; print(secrets.token_urlsafe(32))"
-   aws ssm put-parameter --name /oshiloot/link_signing_key --type SecureString --value $key
-   aws ssm put-parameter --name /oshiloot/mal_client_id --type SecureString --value "YOUR_MAL_CLIENT_ID"
-   aws ssm put-parameter --name /oshiloot/mal_client_secret --type SecureString --value "YOUR_MAL_CLIENT_SECRET"
-   $session = python -c "import secrets; print(secrets.token_urlsafe(32))"
-   aws ssm put-parameter --name /oshiloot/session_secret --type SecureString --value $session
-   ```
-
-   The optional settings from `.env` go here too, named in lower case, for example
-   `/oshiloot/ebay_client_id`.
-
-4. **Connect GitHub to AWS.** In the repo, go to Settings → Secrets and variables →
-   Actions → **Variables**, and add `AWS_DEPLOY_ROLE_ARN` (from step 2) and `AWS_REGION`
-   (for example `ap-southeast-1`).
-
-5. **Deploy.** Go to Actions → **deploy** → Run workflow. It builds the container, deploys,
-   uploads the website and checks it responds. The site's address
-   (`https://….cloudfront.net`) is in the run's summary.
-
-6. **Switch CloudFront to its free plan.** In the CloudFront console, open your
-   distribution and set its pricing plan to **Free**.
-
-7. **Turn on sign-in for the live site.** Create a second MyAnimeList app for production,
-   with its App Redirect URL set to `https://YOUR-SITE.cloudfront.net/api/anime/auth/callback`.
-   Put its ID and secret in `/oshiloot/mal_client_id` and `/oshiloot/mal_client_secret`
-   (add `--overwrite`), and add:
-
-   ```powershell
-   aws ssm put-parameter --name /oshiloot/public_url --type String --value "https://YOUR-SITE.cloudfront.net"
-   ```
-
-   The backend reads its settings when it starts, so restart it:
-
-   ```powershell
-   $fn = aws lambda list-functions --query "Functions[?starts_with(FunctionName, 'OshiLootApp')].FunctionName" --output text
-   aws lambda update-function-configuration --function-name $fn --description "Settings reloaded $(Get-Date -Format s)"
+   $fn = aws lambda list-functions --query "Functions[?starts_with(FunctionName, 'OshiLootApp-Backend')].FunctionName" --output text
+   aws lambda update-function-configuration --function-name $fn --description "Settings reloaded $(Get-Date -Format s)" | Out-Null
+   aws lambda wait function-updated --function-name $fn
    ```
 
    Any later deploy restarts it too.
 
-To remove everything: `npx cdk destroy OshiLootApp OshiLootBase` in `infra`.
+**To remove everything,** run `npx cdk destroy OshiLootApp OshiLootBase` in `infra`. The
+click history table, the Parameter Store settings and the certificate are kept; delete them
+in the AWS console if you want them gone.
 
 ## Data sources, terms and credits
 
-- **MyAnimeList** provides lists, anime details and theme songs, under its
+- **MyAnimeList** provides lists, anime details, the home page's rows, and theme songs,
+  under its
   [API agreement](https://myanimelist.net/static/apiagreement.html). That agreement bars
   storing users' list data, so OshiLoot never does, and it requires MyAnimeList's written
   approval before an app earns money. Get that approval before turning on affiliate links.
@@ -406,6 +541,13 @@ To remove everything: `npx cdk destroy OshiLootApp OshiLootBase` in `infra`.
 
 OshiLoot isn't affiliated with MyAnimeList, AniList, Apple or any store. Anime titles,
 characters and artwork belong to their owners.
+
+## What's next
+
+- **More listings inside OshiLoot:** Rakuten Ichiba and Yahoo! Shopping Japan, through
+  their official APIs.
+- **Proxy-buy links** for shops that don't ship to your country, such as Mercari and
+  Yahoo! Auctions, so you can still order through a proxy service.
 
 ## Licence
 
