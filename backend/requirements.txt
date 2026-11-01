@@ -1,7 +1,7 @@
 fastapi==0.162.0
 uvicorn==0.54.0
 httpx==0.28.1
-pydantic-settings==2.16.1
+pydantic-settings==2.16.2
 PyYAML==6.0.3
-boto3==1.43.120
+boto3==1.43.121
 cryptography==50.0.2
