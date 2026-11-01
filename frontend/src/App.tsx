@@ -57,6 +57,9 @@ function Footer() {
         Anime and theme song data from MyAnimeList. Character data from AniList. Song previews courtesy of iTunes. Not
         affiliated with MyAnimeList, AniList, Apple or any store.
       </p>
+      {import.meta.env.VITE_CF_ANALYTICS_TOKEN && (
+        <p>Visits are counted with Cloudflare Web Analytics, which uses no cookies and doesn't track individual visitors.</p>
+      )}
     </footer>
   );
 }

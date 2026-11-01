@@ -110,7 +110,7 @@ export class AppStack extends Stack {
       memorySize: 512,
       timeout: Duration.seconds(15),
       logGroup: new logs.LogGroup(this, "BackendLogs", {
-        retention: logs.RetentionDays.TWO_WEEKS,
+        retention: logs.RetentionDays.THREE_MONTHS, // enough to count a quarter's usage
         removalPolicy: RemovalPolicy.DESTROY,
       }),
       environment: {

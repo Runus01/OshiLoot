@@ -28,7 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging()
     app = FastAPI(
         title="OshiLoot API",
-        version="1.0.0",
+        version="1.1.0",
         lifespan=lifespan,
         docs_url="/api/docs",
         openapi_url="/api/openapi.json",

@@ -71,9 +71,14 @@ jobs:
             --outputs-file outputs.json
 
       - name: Upload the frontend
+        env:
+          # Optional: Cloudflare Web Analytics' site token, to count visits (README).
+          VITE_CF_ANALYTICS_TOKEN: ${{ vars.CF_ANALYTICS_TOKEN }}
         run: |
           BUCKET=$(jq -r '.OshiLootApp.SiteBucketName' infra/outputs.json)
           DISTRIBUTION=$(jq -r '.OshiLootApp.DistributionId' infra/outputs.json)
+          # Link previews (Telegram, LinkedIn…) need the preview image's full address.
+          export VITE_SITE_URL=$(jq -r '.OshiLootApp.SiteUrl' infra/outputs.json)
           cd frontend
           npm ci
           npm run build
