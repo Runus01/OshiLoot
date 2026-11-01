@@ -22,7 +22,7 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Signs in with GitHub's OIDC token, unless the AWS_ACCESS_KEY_ID and
       # AWS_SECRET_ACCESS_KEY secrets are set (accounts that can't use OIDC, see README).
