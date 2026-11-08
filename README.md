@@ -68,6 +68,9 @@ Your anime appear on shelves by score, from 10 down. Switch between **Completed*
 **Watching** with the tabs. **Clear list** puts the page back as it was, ready for another
 username.
 
+Mature anime, such as R-17+ titles, show up like any other. Explicit adult titles (what
+MyAnimeList marks not safe for work) are left out of lists, search and the home page rows.
+
 ### 3. Browse, or search for any anime
 
 Three rows of covers give you somewhere to start, below the intro (and below your list,
