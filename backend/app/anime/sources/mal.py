@@ -18,9 +18,18 @@ from app.anime.sources.base import (
 from app.anime.themes import parse_theme
 
 MAL_API = "https://api.myanimelist.net/v2"
-ANIME_FIELDS = "alternative_titles,main_picture,mean,media_type"
+ANIME_FIELDS = "alternative_titles,main_picture,mean,media_type,nsfw"
+# MAL leaves out anything it doesn't mark safe for work unless asked with nsfw=true. Its
+# "gray" (may not be safe for work) covers ordinary mature anime, such as R-17+ violence or
+# Girls Love titles, which people expect in their lists and searches. "black" is explicit
+# adult content, which OshiLoot drops itself (see _explicit).
+INCLUDE_MATURE = {"nsfw": "true"}
 # Music videos and promos can rank among a season's most-listed entries; they have no merch.
 NOT_SHOWS = {"music", "pv", "cm"}
+
+
+def _explicit(node: dict[str, Any]) -> bool:
+    return node.get("nsfw") == "black"
 
 
 def _to_anime(node: dict[str, Any]) -> Anime:
@@ -72,6 +81,7 @@ class MalSource:
             "sort": "list_score",
             "limit": 1000,
             "fields": f"list_status,{ANIME_FIELDS}",
+            **INCLUDE_MATURE,
         }
         entries: list[ListEntry] = []
         while url:
@@ -82,6 +92,8 @@ class MalSource:
                 raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
             body = response.json()
             for item in body.get("data", []):
+                if _explicit(item["node"]):
+                    continue
                 list_status = item.get("list_status") or {}
                 entries.append(
                     ListEntry(
@@ -95,13 +107,18 @@ class MalSource:
 
     async def search(self, query: str, limit: int) -> list[Anime]:
         response = await self._get(
-            f"{MAL_API}/anime", {"q": query, "limit": limit, "fields": ANIME_FIELDS}
+            f"{MAL_API}/anime",
+            {"q": query, "limit": limit, "fields": ANIME_FIELDS, **INCLUDE_MATURE},
         )
         if response.status_code == 400:
             return []  # MAL rejects some very short or unusual queries
         if response.status_code != 200:
             raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
-        return [_to_anime(item["node"]) for item in response.json().get("data", [])]
+        return [
+            _to_anime(item["node"])
+            for item in response.json().get("data", [])
+            if not _explicit(item["node"])
+        ]
 
     async def get(self, anime_id: int) -> Anime | None:
         response = await self._get(f"{MAL_API}/anime/{anime_id}", {"fields": ANIME_FIELDS})
@@ -120,6 +137,7 @@ class MalSource:
                 "sort": "anime_num_list_users",
                 "limit": limit,
                 "fields": f"{ANIME_FIELDS},start_season",
+                **INCLUDE_MATURE,
             },
         )
         if response.status_code != 200:
@@ -130,7 +148,7 @@ class MalSource:
             start = node.get("start_season") or {}
             if start and (start.get("year"), start.get("season")) != (year, season):
                 continue
-            if node.get("media_type") in NOT_SHOWS:
+            if node.get("media_type") in NOT_SHOWS or _explicit(node):
                 continue
             premiered.append(_to_anime(node))
         return premiered
@@ -146,14 +164,19 @@ class MalSource:
     async def _chart(self, ranking_type: str, limit: int) -> list[Anime]:
         response = await self._get(
             f"{MAL_API}/anime/ranking",
-            {"ranking_type": ranking_type, "limit": limit, "fields": ANIME_FIELDS},
+            {
+                "ranking_type": ranking_type,
+                "limit": limit,
+                "fields": ANIME_FIELDS,
+                **INCLUDE_MATURE,
+            },
         )
         if response.status_code != 200:
             raise AnimeSourceError(f"MyAnimeList returned {response.status_code}")
         return [
             _to_anime(item["node"])
             for item in response.json().get("data", [])
-            if item["node"].get("media_type") not in NOT_SHOWS
+            if item["node"].get("media_type") not in NOT_SHOWS and not _explicit(item["node"])
         ]
 
     async def themes(self, anime_id: int) -> Themes | None:

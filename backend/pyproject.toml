@@ -1,6 +1,6 @@
 [project]
 name = "oshiloot-backend"
-version = "1.2.0"
+version = "1.2.1"
 description = "Modular monolith API for OshiLoot"
 requires-python = ">=3.12"
 
